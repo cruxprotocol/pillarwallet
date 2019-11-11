@@ -21,6 +21,7 @@ platform :android do
   lane :deploy_staging do
     changelog_from_git_commits(
      merge_commit_filtering: 'exclude_merges'
+     commits_count: '600'
     )
     upload_to_play_store(
       track: 'internal',

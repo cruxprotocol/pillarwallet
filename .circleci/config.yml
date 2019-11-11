@@ -851,20 +851,20 @@ workflows:
   build_and_deploy:
     jobs:
       - build-and-test
-      - hockeyapp_ios:
-          requires:
-            - build-and-test
-          filters:
-            branches:
-              only:
-                  - develop
-      - hockeyapp_android:
-          requires:
-            - build-and-test
-          filters:
-            branches:
-              only:
-                  - develop
+      # - hockeyapp_ios:
+      #     requires:
+      #       - build-and-test
+      #     filters:
+      #       branches:
+      #         only:
+      #             - develop
+      # - hockeyapp_android:
+      #     requires:
+      #       - build-and-test
+      #     filters:
+      #       branches:
+      #         only:
+      #             - develop
       - stage_ios:
           requires:
             - build-and-test
@@ -878,7 +878,7 @@ workflows:
           filters:
             branches:
               only:
-                  - master
+                  - fix/changelog-fastlane
       - slack-prod-approval:
           requires:
             - stage_ios
