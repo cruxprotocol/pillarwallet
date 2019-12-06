@@ -48,7 +48,7 @@ import {
   ETH,
   PLR,
 } from 'constants/assetsConstants';
-import { EXCHANGE, SMART_WALLET_INTRO } from 'constants/navigationConstants';
+import { EXCHANGE, SMART_WALLET_INTRO, CRUXPAY_INTRO } from 'constants/navigationConstants';
 import { SMART_WALLET_UPGRADE_STATUSES } from 'constants/smartWalletConstants';
 
 import { activeAccountSelector } from 'selectors';
@@ -507,6 +507,12 @@ class WalletView extends React.Component<Props, State> {
               bordered
               addon={(<LabelBadge label="NEW" />)}
             />}
+            <ListItemChevron
+              label="Setup CruxPay"
+              onPress={() => navigation.navigate(CRUXPAY_INTRO)}
+              bordered
+              addon={(<LabelBadge label="NEW" />)}
+            />
           </ActionsWrapper>}
         </ListWrapper>}
       </CustomKAWrapper>

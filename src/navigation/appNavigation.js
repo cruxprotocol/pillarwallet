@@ -91,6 +91,8 @@ import SettingsScreen from 'screens/Settings';
 import ChatScreen from 'screens/Chat';
 import FiatExchangeScreen from 'screens/FiatExchange';
 import FiatCryptoScreen from 'screens/FiatExchange/FiatCrypto';
+import CruxPayIntroScreen from 'screens/CruxPay/CruxPayIntro';
+import CruxPayRegistrationScreen from 'screens/CruxPay/CruxPayRegistration';
 import SmartWalletIntroScreen from 'screens/UpgradeToSmartWallet/SmartWalletIntro';
 import UnsettledAssets from 'screens/UnsettledAssets';
 
@@ -204,6 +206,8 @@ import {
   TANK_WITHDRAWAL_FLOW,
   TANK_WITHDRAWAL,
   TANK_WITHDRAWAL_CONFIRM,
+  CRUXPAY_INTRO,
+  CRUXPAY_REGISTRATION,
 } from 'constants/navigationConstants';
 import { PENDING, REGISTERED } from 'constants/userConstants';
 
@@ -572,6 +576,8 @@ const AppFlowNavigation = createStackNavigator(
     [CONTACT_INFO]: ConnectedContactInfo,
     [PILLAR_NETWORK_INTRO]: PillarNetworkIntro,
     [SMART_WALLET_INTRO]: SmartWalletIntroScreen,
+    [CRUXPAY_INTRO]: CruxPayIntroScreen,
+    [CRUXPAY_REGISTRATION]: CruxPayRegistrationScreen,
     [BITCOIN_NETWORK_INTRO]: BitcoinNetworkIntro,
   },
   modalTransition,
