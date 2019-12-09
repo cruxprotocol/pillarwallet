@@ -51,6 +51,7 @@ import { getSaltedPin, decryptWallet, normalizeWalletAddress } from 'utils/walle
 import Storage from 'services/storage';
 import { navigate, getNavigationState, getNavigationPathAndParamsState } from 'services/navigation';
 import ChatService from 'services/chat';
+import { getPrivateKeyForCruxPayInit } from 'services/bitcoin';
 import firebase from 'react-native-firebase';
 import Intercom from 'react-native-intercom';
 import { findKeyBasedAccount } from 'utils/accounts';
@@ -142,7 +143,8 @@ export const loginAction = (
       }
       if (pin) {
         const saltedPin = await getSaltedPin(pin, dispatch);
-        const decryptionOptions = generateNewConnKeys ? { mnemonic: true } : {};
+        // TODO: find how unsafe this change is
+        const decryptionOptions = generateNewConnKeys ? { mnemonic: true } : { mnemonic: true };
         wallet = await decryptWallet(encryptedWallet, saltedPin, decryptionOptions);
       } else if (privateKey) {
         const walletAddress = normalizeWalletAddress(encryptedWallet.address);
@@ -210,8 +212,7 @@ export const loginAction = (
 
         // init cruxPay Wallet
         if (cruxPayFeatureEnabled && wallet) {
-          // TODO: derive this from wallet object
-          const privateKeyForCruxPayInit = 'cdf2d276caf0c9c34258ed6ebd0e60e0e8b3d9a7b8a9a717f2e19ed9b37f7c6f';
+          const privateKeyForCruxPayInit = await getPrivateKeyForCruxPayInit(wallet.mnemonic);
           await dispatch(initOnLoginCruxPayAction(privateKeyForCruxPayInit));
         }
 

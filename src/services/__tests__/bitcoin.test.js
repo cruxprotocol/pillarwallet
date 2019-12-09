@@ -24,6 +24,7 @@ import {
   collectOutputs,
   transactionFromPlan,
   sendRawTransaction,
+  getPrivateKeyForCruxPayInit,
 } from 'services/bitcoin';
 import type {
   BitcoinUtxo,
@@ -218,6 +219,17 @@ describe('bitcoin service', () => {
       const address2 = keyPairAddress(keyPair);
 
       expect(address1).toEqual(address2);
+    });
+  });
+
+  describe('getPrivateKeyForCruxPayInit', () => {
+    it('returns same values each time', async () => {
+      const cruxTestMnemonic = 'jelly level auction pluck system record unique huge text fold galaxy';
+      const pvt1 = await getPrivateKeyForCruxPayInit(cruxTestMnemonic);
+      const pvt2 = await getPrivateKeyForCruxPayInit(cruxTestMnemonic);
+
+      expect(pvt1).toEqual(pvt2);
+      expect(pvt1).toEqual('614af0dcaa5c7b271f66969cb0e8108d32c290a45b72ef1e040841495271b7f1');
     });
   });
 });

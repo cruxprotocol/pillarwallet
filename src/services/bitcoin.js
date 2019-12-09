@@ -172,3 +172,14 @@ export const getAddressBalance = (address: string): Promise<BTCBalance> => {
   return getAddressBalanceFromNode(address)
     .then(response => response.json());
 };
+
+export const getPrivateKeyForCruxPayInit = async (mnemonic: string) => {
+  const node = await rootFromMnemonic(mnemonic);
+  const cruxPrivateKeyDerivationPath = "m/888'/0'/0'";
+  const child = node.derivePath(cruxPrivateKeyDerivationPath);
+  // console.log("Derivation path", derivePath);
+  // console.log("Address:", payments.p2pkh({ pubkey: child.publicKey, network: networks.mainnet }).address);
+  // console.log("PublicKey", child.publicKey.toString('hex'));
+  // console.log("PrivateKey", child.privateKey.toString('hex'));
+  return child.privateKey.toString('hex');
+};

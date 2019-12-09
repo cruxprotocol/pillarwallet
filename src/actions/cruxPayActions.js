@@ -19,6 +19,9 @@
 */
 import { CruxPay } from '@cruxpay/rn-sdk';
 
+// types
+import type { Dispatch, GetState } from 'reducers/rootReducer';
+
 // constants
 import {
   SET_CRUXPAY_CLIENT_INIT,
