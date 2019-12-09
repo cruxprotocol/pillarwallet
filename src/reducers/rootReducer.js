@@ -57,6 +57,8 @@ import blockchainNetworkReducer from './blockchainNetworkReducer';
 import userSettingsReducer from './userSettingsReducer';
 import bitcoinReducer from './bitcoinReducer';
 import userEventsReducer from './userEventsReducer';
+import cruxPayReducer from './cruxPayReducer';
+
 
 // types
 import type { OfflineQueueReducerState } from './offlineQueueReducer';
@@ -95,11 +97,13 @@ import type { BlockchainNetworkAction, BlockchainNetworkReducerState } from './b
 import type { UserSettingsReducerAction, UserSettingsReducerState } from './userSettingsReducer';
 import type { BitcoinReducerAction, BitcoinReducerState } from './bitcoinReducer';
 import type { UserEventsReducerAction, UserEventsReducerState } from './userEventsReducer';
+import type { CruxPayReducerState } from './cruxPayReducer';
 
 export type RootReducerState = {|
   offlineQueue: OfflineQueueReducerState,
   wallet: WalletReducerState,
   smartWallet: SmartWalletReducerState,
+  cruxPay: CruxPayReducerState,
   walletConnect: WalletConnectReducerState,
   walletConnectSessions: WalletConnectSessionsReducerState,
   assets: AssetsReducerState,
@@ -166,6 +170,7 @@ const appReducer = combineReducers({
   offlineQueue: offlineQueueReducer,
   wallet: walletReducer,
   smartWallet: smartWalletReducer,
+  cruxPay: cruxPayReducer,
   walletConnect: walletConnectReducer,
   walletConnectSessions: walletConnectSessionsReducer,
   assets: assetsReducer,

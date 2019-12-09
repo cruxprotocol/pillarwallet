@@ -35,6 +35,10 @@ import {
   setSmartWalletUpgradeStatusAction,
   fetchVirtualAccountBalanceAction,
 } from 'actions/smartWalletActions';
+import {
+  initCruxPayClientAction,
+  loadCruxIDStateAction,
+} from 'actions/cruxPayActions';
 import { UPDATE_BALANCES, UPDATE_ASSETS } from 'constants/assetsConstants';
 import { SET_HISTORY } from 'constants/historyConstants';
 import { SET_COLLECTIBLES_TRANSACTION_HISTORY, UPDATE_COLLECTIBLES } from 'constants/collectiblesConstants';
@@ -280,5 +284,12 @@ export const initOnLoginSmartWalletAccountAction = (privateKey: string) => {
         payload: blockchainNetwork,
       });
     }
+  };
+};
+
+export const initOnLoginCruxPayAction = (privateKey: string) => {
+  return async (dispatch: Dispatch) => {
+    await dispatch(initCruxPayClientAction(privateKey));
+    await dispatch(loadCruxIDStateAction());
   };
 };

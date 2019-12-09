@@ -15,4 +15,23 @@ class CruxStorageService extends CruxPay.storage.StorageService {
     return storage.get(key);
   }
 }
-export { CruxStorageService };
+
+class InMemStorage extends CruxPay.storage.StorageService {
+  constructor() {
+    super();
+    this.dataMemory = {};
+  }
+
+  setItem = async (key: string, value: string): Promise<void> => {
+    this.dataMemory[key] = value;
+  };
+
+  getItem = async (key: string): Promise<string | null> => {
+    return this.dataMemory[key];
+  }
+}
+
+export {
+  CruxStorageService,
+  InMemStorage,
+};

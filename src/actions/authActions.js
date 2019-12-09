@@ -62,7 +62,7 @@ import { setKeychainDataObject } from 'utils/keychain';
 import { setupSentryAction } from 'actions/appActions';
 import { signalInitAction } from 'actions/signalClientActions';
 import { updateConnectionKeyPairs } from 'actions/connectionKeyPairActions';
-import { initOnLoginSmartWalletAccountAction } from 'actions/accountsActions';
+import { initOnLoginSmartWalletAccountAction, initOnLoginCruxPayAction } from 'actions/accountsActions';
 import { updatePinAttemptsAction } from 'actions/walletActions';
 import { fetchTransactionsHistoryAction } from 'actions/historyActions';
 import { setFirebaseAnalyticsCollectionEnabled } from 'actions/appSettingsActions';
@@ -125,6 +125,7 @@ export const loginAction = (
 
     await dispatch(fetchFeatureFlagsAction()); // wait until fetches new flags
     const smartWalletFeatureEnabled = get(getState(), 'featureFlags.data.SMART_WALLET_ENABLED');
+    const cruxPayFeatureEnabled = get(getState(), 'featureFlags.data.CRUXPAY_ENABLED');
     const bitcoinFeatureEnabled = get(getState(), 'featureFlags.data.BITCOIN_ENABLED');
 
     try {
@@ -205,6 +206,13 @@ export const loginAction = (
         // init smart wallet
         if (smartWalletFeatureEnabled && wallet.privateKey && userHasSmartWallet(accounts)) {
           await dispatch(initOnLoginSmartWalletAccountAction(wallet.privateKey));
+        }
+
+        // init cruxPay Wallet
+        if (cruxPayFeatureEnabled && wallet) {
+          // TODO: derive this from wallet object
+          const privateKeyForCruxPayInit = 'cdf2d276caf0c9c34258ed6ebd0e60e0e8b3d9a7b8a9a717f2e19ed9b37f7c6f';
+          await dispatch(initOnLoginCruxPayAction(privateKeyForCruxPayInit));
         }
 
         // set ETHEREUM network as active
