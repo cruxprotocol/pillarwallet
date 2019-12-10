@@ -18,115 +18,150 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 import * as React from 'react';
-import styled from 'styled-components/native';
-import type { NavigationScreenProp } from 'react-navigation';
+
 import { connect } from 'react-redux';
-import { CachedImage } from 'react-native-cached-image';
-
 import ContainerWithHeader from 'components/Layout/ContainerWithHeader';
-import { ScrollWrapper, Wrapper } from 'components/Layout';
-import { MediumText, BoldText } from 'components/Typography';
-import Button from 'components/Button';
+import { Wrapper } from 'components/Layout';
+import { WebView } from 'react-native-webview';
+import type { NavigationScreenProp } from 'react-navigation';
+import { createStructuredSelector } from 'reselect';
+import Spinner from 'components/Spinner';
+import styled from 'styled-components/native';
+import { accountAssetsSelector } from 'selectors/assets';
 
-import { baseColors, fontStyles } from 'utils/variables';
-import { responsiveSize } from 'utils/ui';
+// service
+import { getCruxWebViewInput } from 'services/cruxPay';
+
+// type
+import type { Assets } from 'models/Asset';
+
+// constants
+import { CRUXPAY_INTRO } from 'constants/navigationConstants';
+
+// actions
+import { setBrowsingWebViewAction } from 'actions/appSettingsActions';
 
 
-import { CRUXPAY_REGISTRATION } from 'constants/navigationConstants';
+export const LoadingSpinner = styled(Spinner)`
+  padding-top: 20px;
+  align-items: center;
+  justify-content: center;
+`;
 
 
 type Props = {
   navigation: NavigationScreenProp<*>,
-  addNetwork: Function,
-  baseFiatCurrency: ?string,
+  assets: Assets,
+  cruxPay: Object,
+  setBrowsingWebView: Function,
 }
 
 type State = {
-  showDeployPayOptions: boolean,
-}
-
-const CustomWrapper = styled.View`
-  flex: 1;
-  padding: 20px 55px 20px 46px;
-`;
-
-const Title = styled(BoldText)`
-  color: ${baseColors.persianBlue};
-  ${fontStyles.rJumbo};
-`;
-
-const BodyText = styled(MediumText)`
-  color: ${baseColors.persianBlue};
-  ${fontStyles.rBig};
-  margin-top: ${responsiveSize(26)}px;
-`;
-
-const ButtonWrapper = styled(Wrapper)`
-  margin: 30px 0 50px;
-  padding: 0 46px;
-`;
-
-
-const FeatureIcon = styled(CachedImage)`
-  height: 124px;
-  width: 124px;
-  margin-bottom: 24px;
-`;
-
-const CruxPayIcon = require('assets/images/logo_cruxpay.jpg');
+  loading: boolean,
+  currentInputData: any,
+};
 
 class CruxPayRegistration extends React.PureComponent<Props, State> {
-  render() {
-    const {
-      navigation,
-    } = this.props;
-    const isDeployed = navigation.getParam('deploy', false);
 
+  state = {
+    loading: true,
+    currentInputData: {},
+  };
+
+  componentDidMount = () => {
+    getCruxWebViewInput().then((currentInputData) => {
+      this.setState({
+        loading: false,
+        currentInputData,
+      });
+      this.props.setBrowsingWebView(true);
+    }).catch(() => {});
+  };
+
+  componentWillUnmount() {
+    this.props.setBrowsingWebView(false);
+  }
+
+  cruxPayCallback = async (event) => {
+    const { cruxPay, navigation } = this.props;
+
+    const { putAddressMap, registerCruxID } = cruxPay.cruxClient;
+    const parsedPostMessage = JSON.parse(event.nativeEvent.data);
+    switch (parsedPostMessage.type) {
+      case 'editExisting':
+        putAddressMap(parsedPostMessage.data.checkedCurrencies).then((map) => {
+          console.log(map);
+        }).catch((err) => {
+          console.error(err);
+        });
+        break;
+      case 'createNew':
+        registerCruxID(parsedPostMessage.data.newCruxIDSubdomain).then(() => {
+          putAddressMap(parsedPostMessage.data.checkedCurrencies).then((map) => {
+            console.log(map);
+          }).catch((err) => {
+            console.error(err);
+          });
+        }).catch((err) => {
+          console.error(err);
+        });
+        break;
+      case 'close':
+        navigation.navigate(CRUXPAY_INTRO);
+        break;
+      default:
+        break;
+    }
+  };
+
+  render() {
+    const { assets } = this.props;
+    const {
+      loading,
+      currentInputData,
+    } = this.state;
+    const cruxPayURL = 'https://s3-ap-southeast-1.amazonaws.com/files.coinswitch.co/openpay-setup/1.0.0/build/index.html';
+    const availableCurrencies = {};
+    Object.keys(assets).forEach((key) => {
+      availableCurrencies[key] = assets[key].address;
+    });
+    const webviewCallsReact = `window.postMessage(${JSON.stringify(JSON.stringify(currentInputData))}, '*');`;
     return (
-      <ContainerWithHeader
-        headerProps={{
-          floating: true,
-          transparent: true,
-        }}
-        backgroundColor={baseColors.zircon}
-      >
-        <ScrollWrapper contentContainerStyle={{ paddingTop: 80 }}>
-          <CustomWrapper>
-            <FeatureIcon source={CruxPayIcon} />
-            <Title>
-              Crux Pay
-            </Title>
-            <BodyText>
-              CruxPay is a protocol which aims to link any blockchain address to a human-readable name, and let users
-              interact with each other and dApps with ease.
-            </BodyText>
-            <BodyText>
-              Clicking setup below registers your CruxID and ties it with your account. After registration is completed,
-              you can manage your CruxID account directly from manage section. Be noted that all address selected
-              would now be publicly exposed.
-            </BodyText>
-            <BodyText>
-              Registering CruxID may take several hours.
-            </BodyText>
-          </CustomWrapper>
-          <ButtonWrapper>
-            <Button
-              block
-              title={isDeployed ? 'Manage Address' : 'Setup CruxPay'}
-              onPress={() => navigation.navigate(CRUXPAY_REGISTRATION, { deploy: true })}
-              style={{
-                backgroundColor: baseColors.persianBlue,
-                marginTop: 40,
-                marginBottom: 20,
-                borderRadius: 6,
-              }}
-              textStyle={{ color: baseColors.white }}
+      <ContainerWithHeader headerProps={{ centerItems: [{ title: 'Register CruxPay' }] }} >
+        <Wrapper regularPadding style={{ justifyContent: 'space-between', flex: 1 }}>
+          {loading && <LoadingSpinner />}
+          {!loading &&
+            <WebView
+              clearCache={false}
+              source={{ uri: cruxPayURL }}
+              originWhitelist={['*']}
+              onMessage={this.cruxPayCallback}
+              injectedJavaScript={webviewCallsReact}
             />
-          </ButtonWrapper>
-        </ScrollWrapper>
+          }
+        </Wrapper>
       </ContainerWithHeader>
     );
   }
 }
 
-export default connect()(CruxPayRegistration);
+const structuredSelector = createStructuredSelector({
+  assets: accountAssetsSelector,
+});
+
+const mapStateToProps = ({
+  cruxPay,
+}) => ({
+  cruxPay,
+});
+
+const combinedMapStateToProps = (state) => ({
+  ...structuredSelector(state),
+  ...mapStateToProps(state),
+});
+
+const mapDispatchToProps = (dispatch: Function) => ({
+  setBrowsingWebView: isBrowsing => dispatch(setBrowsingWebViewAction(isBrowsing)),
+});
+
+export default connect(combinedMapStateToProps, mapDispatchToProps)(CruxPayRegistration);

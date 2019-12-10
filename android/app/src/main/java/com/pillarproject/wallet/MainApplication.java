@@ -51,7 +51,7 @@ import io.sentry.RNSentryPackage;
 import com.tradle.react.UdpSocketsModule;
 import com.oblador.vectoricons.VectorIconsPackage;
 import com.reactlibrary.RNThreadPackage;
-
+import android.webkit.WebView;
 // react-native-splash-screen >= 0.3.1
 
 
@@ -135,6 +135,7 @@ public class MainApplication extends Application implements ShareApplication, Re
     long storageSizeMax = 60L * 1024L * 1024L; // 60 MB
     // Default size of AsyncStorage is 6MB
     com.facebook.react.modules.storage.ReactDatabaseSupplier.getInstance(getApplicationContext()).setMaximumSize(storageSizeMax);
+    WebView.setWebContentsDebuggingEnabled(true);
   }
 
   @Override
