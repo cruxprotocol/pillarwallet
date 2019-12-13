@@ -32,11 +32,14 @@ import {
 import { InMemStorage } from 'services/cruxPay';
 
 export const initCruxPayClientAction = (walletPrivateKey: string) => {
-  return async (dispatch: Dispatch) => {
+  return async (dispatch: Dispatch, getState: GetState) => {
+    const {
+      cruxPay,
+    } = getState();
     const s = new InMemStorage();
     const cruxClientOptions = {
       getEncryptionKey: () => 'fookey',
-      walletClientName: 'cruxdev',
+      walletClientName: cruxPay.walletClientName,
       storage: s,
       privateKey: walletPrivateKey,
     };

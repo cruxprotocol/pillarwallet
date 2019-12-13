@@ -175,7 +175,7 @@ export const getAddressBalance = (address: string): Promise<BTCBalance> => {
 
 export const getPrivateKeyForCruxPayInit = async (mnemonic: string) => {
   const node = await rootFromMnemonic(mnemonic);
-  const cruxPrivateKeyDerivationPath = "m/888'/0'/0'";
+  const cruxPrivateKeyDerivationPath = "m/889'/0'/0'";
   const child = node.derivePath(cruxPrivateKeyDerivationPath);
   // console.log("Derivation path", derivePath);
   // console.log("Address:", payments.p2pkh({ pubkey: child.publicKey, network: networks.mainnet }).address);

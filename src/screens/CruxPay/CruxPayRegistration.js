@@ -28,6 +28,7 @@ import { createStructuredSelector } from 'reselect';
 import Spinner from 'components/Spinner';
 import styled from 'styled-components/native';
 import { accountAssetsSelector } from 'selectors/assets';
+import { Alert } from 'react-native';
 
 // service
 import { getCruxWebViewInput } from 'services/cruxPay';
@@ -36,10 +37,11 @@ import { getCruxWebViewInput } from 'services/cruxPay';
 import type { Assets } from 'models/Asset';
 
 // constants
-import { CRUXPAY_INTRO } from 'constants/navigationConstants';
+import { CRUXPAY_INTRO, ASSETS } from 'constants/navigationConstants';
 
 // actions
 import { setBrowsingWebViewAction } from 'actions/appSettingsActions';
+import { loadCruxIDStateAction } from 'actions/cruxPayActions';
 
 
 export const LoadingSpinner = styled(Spinner)`
@@ -62,20 +64,78 @@ type State = {
 };
 
 class CruxPayRegistration extends React.PureComponent<Props, State> {
-
   state = {
     loading: true,
     currentInputData: {},
   };
 
+  onClosePress = () => {
+    const { navigation } = this.props;
+    Alert.alert(
+      'Cancel CruxPay Setup',
+      'Are you sure you want to cancel the setup?',
+      [
+        { text: 'Yes', onPress: () => navigation.navigate(CRUXPAY_INTRO) },
+        { text: 'No', style: 'cancel' },
+      ],
+      { cancelable: true },
+    );
+  };
+
+  handleError(error: any) {
+    console.error('CruxPay handleError: ', error);
+  }
+
+  onRegisterSuccess = async () => {
+    // TODO: discuss what to do if a few failed?
+    await this.props.loadCruxIDState();
+    const { navigation, cruxPay } = this.props;
+    await this.props.loadCruxIDState(false);
+    Alert.alert(
+      'Registration Success',
+      `Your cruxID: ${cruxPay.cruxID} is being updated. 
+      It takes about 3-4 hours to complete registration on blockchain.`,
+      [
+        { text: 'OK', onPress: () => navigation.navigate(ASSETS) },
+      ],
+    );
+  };
+
+  onPutAddressSuccess = async () => {
+    // TODO: discuss what to do if a few failed?
+    await this.props.loadCruxIDState();
+    const { navigation, cruxPay } = this.props;
+    await this.props.loadCruxIDState(false);
+    Alert.alert(
+      'Update CruxPay Addresses',
+      `Your cruxID: ${cruxPay.cruxID} is being updated. 
+      It takes about 3-4 hours to complete registration on blockchain.`,
+      [
+        { text: 'OK', onPress: () => navigation.navigate(ASSETS) },
+      ],
+    );
+  };
+
   componentDidMount = () => {
-    getCruxWebViewInput().then((currentInputData) => {
+    const { user, assets, cruxPay } = this.props;
+    const availableCurrencies = {};
+    Object.keys(assets).forEach((key) => {
+      // eslint-disable-next-line max-len
+      availableCurrencies[key.toLowerCase()] = assets[key].address ? { addressHash: assets[key].address } : { addressHash: assets[key].address };
+    });
+    const inputExtension = {
+      availableCurrencies,
+      theme: '#3742fa',
+      cruxIDSubdomain: cruxPay.cruxID || '',
+      suggestedCruxIDSubdomain: user.username,
+    };
+    getCruxWebViewInput(cruxPay, inputExtension).then((currentInputData) => {
       this.setState({
         loading: false,
         currentInputData,
       });
       this.props.setBrowsingWebView(true);
-    }).catch(() => {});
+    }).catch(this.handleError);
   };
 
   componentWillUnmount() {
@@ -83,31 +143,25 @@ class CruxPayRegistration extends React.PureComponent<Props, State> {
   }
 
   cruxPayCallback = async (event) => {
-    const { cruxPay, navigation } = this.props;
+    const { cruxPay } = this.props;
 
     const { putAddressMap, registerCruxID } = cruxPay.cruxClient;
     const parsedPostMessage = JSON.parse(event.nativeEvent.data);
     switch (parsedPostMessage.type) {
       case 'editExisting':
-        putAddressMap(parsedPostMessage.data.checkedCurrencies).then((map) => {
-          console.log(map);
-        }).catch((err) => {
-          console.error(err);
-        });
+        putAddressMap(parsedPostMessage.data.checkedCurrencies).then(async (map) => {
+          await this.onPutAddressSuccess(map);
+        }).catch(this.handleError);
         break;
       case 'createNew':
         registerCruxID(parsedPostMessage.data.newCruxIDSubdomain).then(() => {
-          putAddressMap(parsedPostMessage.data.checkedCurrencies).then((map) => {
-            console.log(map);
-          }).catch((err) => {
-            console.error(err);
-          });
-        }).catch((err) => {
-          console.error(err);
-        });
+          putAddressMap(parsedPostMessage.data.checkedCurrencies).then(async (map) => {
+            await this.onRegisterSuccess(map);
+          }).catch(this.handleError);
+        }).catch(this.handleError);
         break;
       case 'close':
-        navigation.navigate(CRUXPAY_INTRO);
+        this.onClosePress();
         break;
       default:
         break;
@@ -115,16 +169,11 @@ class CruxPayRegistration extends React.PureComponent<Props, State> {
   };
 
   render() {
-    const { assets } = this.props;
     const {
       loading,
       currentInputData,
     } = this.state;
     const cruxPayURL = 'https://s3-ap-southeast-1.amazonaws.com/files.coinswitch.co/openpay-setup/1.0.0/build/index.html';
-    const availableCurrencies = {};
-    Object.keys(assets).forEach((key) => {
-      availableCurrencies[key] = assets[key].address;
-    });
     const webviewCallsReact = `window.postMessage(${JSON.stringify(JSON.stringify(currentInputData))}, '*');`;
     return (
       <ContainerWithHeader headerProps={{ centerItems: [{ title: 'Register CruxPay' }] }} >
@@ -150,8 +199,10 @@ const structuredSelector = createStructuredSelector({
 });
 
 const mapStateToProps = ({
+  user: { data: user },
   cruxPay,
 }) => ({
+  user,
   cruxPay,
 });
 
@@ -162,6 +213,7 @@ const combinedMapStateToProps = (state) => ({
 
 const mapDispatchToProps = (dispatch: Function) => ({
   setBrowsingWebView: isBrowsing => dispatch(setBrowsingWebViewAction(isBrowsing)),
+  loadCruxIDState: () => dispatch(loadCruxIDStateAction()),
 });
 
 export default connect(combinedMapStateToProps, mapDispatchToProps)(CruxPayRegistration);

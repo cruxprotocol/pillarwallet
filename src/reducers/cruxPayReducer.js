@@ -23,6 +23,7 @@ import {
 } from 'constants/cruxPayConstants';
 
 export type CruxPayReducerState = {
+  walletClientName: string,
   clientInitialized: boolean,
   cruxClient: Object,
   cruxID: string | null,
@@ -38,6 +39,7 @@ export type CruxPayReducerAction = {
 };
 
 export const initialState = {
+  walletClientName: 'testwallet3',
   clientInitialized: false,
   cruxClient: {},
   cruxID: null,

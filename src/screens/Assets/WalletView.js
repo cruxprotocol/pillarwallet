@@ -48,7 +48,7 @@ import {
   ETH,
   PLR,
 } from 'constants/assetsConstants';
-import { EXCHANGE, SMART_WALLET_INTRO, CRUXPAY_INTRO } from 'constants/navigationConstants';
+import { EXCHANGE, SMART_WALLET_INTRO, CRUXPAY_INTRO, CRUXPAY_REGISTRATION } from 'constants/navigationConstants';
 import { SMART_WALLET_UPGRADE_STATUSES } from 'constants/smartWalletConstants';
 
 import { activeAccountSelector } from 'selectors';
@@ -350,6 +350,28 @@ class WalletView extends React.Component<Props, State> {
     });
   };
 
+
+  navigateToCruxRegistration = (isCruxIdPresent) => {
+    const { navigation, cruxPay } = this.props;
+    let isManagementAllowed = false;
+    if (isCruxIdPresent && cruxPay.status && cruxPay.status.status === 'DONE') {
+      isManagementAllowed = true;
+    }
+    if (!isCruxIdPresent) {
+      navigation.navigate(CRUXPAY_INTRO);
+    }
+    if (!isManagementAllowed) {
+      Toast.show({
+        title: null,
+        message: 'Your CruxID is still being propograted. Management will be available in few hours.',
+        type: 'info',
+        autoClose: true,
+      });
+      return;
+    }
+    navigation.navigate(CRUXPAY_INTRO);
+  };
+
   render() {
     const {
       query,
@@ -358,6 +380,7 @@ class WalletView extends React.Component<Props, State> {
     } = this.state;
     const {
       collectibles,
+      cruxPay,
       navigation,
       showInsight,
       hideInsight,
@@ -375,6 +398,9 @@ class WalletView extends React.Component<Props, State> {
       fetchAssetsBalances,
       fetchAllCollectiblesData,
     } = this.props;
+
+    // CRUXPAY
+    const isCruxIdPresent = !!cruxPay.cruxID;
 
     // SEARCH
     const isSearchOver = assetsSearchState === FETCHED;
@@ -508,8 +534,8 @@ class WalletView extends React.Component<Props, State> {
               addon={(<LabelBadge label="NEW" />)}
             />}
             <ListItemChevron
-              label="Setup CruxPay"
-              onPress={() => navigation.navigate(CRUXPAY_INTRO)}
+              label={isCruxIdPresent ? `Manage your CruxID: ${cruxPay.cruxID}` : 'Setup CruxPay'}
+              onPress={() => this.navigateToCruxRegistration(isCruxIdPresent)}
               bordered
               addon={(<LabelBadge label="NEW" />)}
             />
@@ -521,6 +547,7 @@ class WalletView extends React.Component<Props, State> {
 }
 
 const mapStateToProps = ({
+  cruxPay,
   assets: {
     assetsState,
     assetsSearchState,
@@ -532,6 +559,7 @@ const mapStateToProps = ({
   smartWallet: smartWalletState,
   featureFlags: { data: { SMART_WALLET_ENABLED: smartWalletFeatureEnabled } },
 }) => ({
+  cruxPay,
   assetsState,
   assetsSearchState,
   assetsSearchResults,
