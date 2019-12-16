@@ -29,6 +29,6 @@ export const INITIAL_FEATURE_FLAGS = {
 };
 export const DEVELOPMENT_FEATURE_FLAGS = {
   SMART_WALLET_ENABLED: true,
-  BITCOIN_ENABLED: false,
+  BITCOIN_ENABLED: true,
   CRUXPAY_ENABLED: true,
 };

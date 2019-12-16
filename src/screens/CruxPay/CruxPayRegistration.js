@@ -93,8 +93,7 @@ class CruxPayRegistration extends React.PureComponent<Props, State> {
     await this.props.loadCruxIDState(false);
     Alert.alert(
       'Registration Success',
-      `Your cruxID: ${cruxPay.cruxID} is being updated. 
-      It takes about 3-4 hours to complete registration on blockchain.`,
+      `Your cruxID: ${cruxPay.cruxID} is being updated. It takes about 3-4 hours to complete registration on blockchain.`,
       [
         { text: 'OK', onPress: () => navigation.navigate(ASSETS) },
       ],

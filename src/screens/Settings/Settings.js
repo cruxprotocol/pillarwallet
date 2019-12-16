@@ -61,6 +61,8 @@ import {
   CHANGE_PIN_FLOW,
   BACKUP_WALLET_IN_SETTINGS_FLOW,
   REVEAL_BACKUP_PHRASE,
+  CRUXPAY_INTRO,
+  CRUXPAY_REGISTRATION,
 } from 'constants/navigationConstants';
 import { supportedFiatCurrencies, defaultFiatCurrency } from 'constants/assetsConstants';
 
@@ -100,6 +102,7 @@ type Props = {
   saveBaseFiatCurrency: (currency: ?string) => Function,
   baseFiatCurrency: ?string,
   smartWalletFeatureEnabled: boolean,
+  cruxPayFeatureEnabled: boolean,
   saveOptOutTracking: (status: boolean) => void,
   optOutTracking: boolean,
   setUserJoinedBeta: Function,
@@ -293,6 +296,19 @@ const formSmartWalletItems = () => {
   ];
 };
 
+const formCruxPayItems = (that, cruxID) => {
+  return [
+    {
+      key: 'manageCruxPay',
+      title: 'Manage your CruxID',
+      body: `configure ${cruxID}`,
+      onPress: that.navigateToCruxRegistration,
+      label: 'new',
+      minHeight: 96,
+    },
+  ];
+};
+
 const formMiscItems = (that) => {
   return [
     {
@@ -407,7 +423,6 @@ class Settings extends React.Component<Props, State> {
     }
   };
 
-
   handleLeaveBetaModalClose = () => {
     // this is needed so that toast message can be shown in settings instead of slide modal that closes
     if (this.state.leaveBetaPressed) {
@@ -436,6 +451,29 @@ class Settings extends React.Component<Props, State> {
     } else {
       navigation.navigate(REVEAL_BACKUP_PHRASE);
     }
+  };
+
+  navigateToCruxRegistration = () => {
+    const { navigation, cruxPay } = this.props;
+    const isCruxIdPresent = !!cruxPay.cruxID;
+    let isManagementAllowed = false;
+    if (isCruxIdPresent && cruxPay.status && cruxPay.status.status === 'DONE') {
+      isManagementAllowed = true;
+    }
+    if (!isCruxIdPresent) {
+      navigation.navigate(CRUXPAY_INTRO);
+      return;
+    }
+    if (!isManagementAllowed) {
+      Toast.show({
+        title: 'Manage CruxID unavailable',
+        message: 'Your CruxID is still being propagated. Management will be available in few hours.',
+        type: 'info',
+        autoClose: true,
+      });
+      return;
+    }
+    navigation.navigate(CRUXPAY_REGISTRATION);
   };
 
   lockWallet = () => {
@@ -477,8 +515,10 @@ class Settings extends React.Component<Props, State> {
       user,
       useBiometrics,
       smartWalletFeatureEnabled,
+      cruxPayFeatureEnabled,
       optOutTracking,
       accounts,
+      cruxPay,
     } = this.props;
 
     const {
@@ -489,6 +529,9 @@ class Settings extends React.Component<Props, State> {
 
     const debugItems = formDebbugItems(this);
     const hasSmartWallet = userHasSmartWallet(accounts);
+
+    // CRUXPAY
+    const isCruxIdPresent = !!cruxPay.cruxID;
 
     return (
       <ContainerWithHeader
@@ -566,6 +609,13 @@ class Settings extends React.Component<Props, State> {
           <SettingsSection
             sectionTitle="Smart Wallet"
             sectionItems={formSmartWalletItems()}
+            isCardsList
+          />}
+
+          {isCruxIdPresent && cruxPayFeatureEnabled &&
+          <SettingsSection
+            sectionTitle="CruxPay"
+            sectionItems={formCruxPayItems(this, cruxPay.cruxID)}
             isCardsList
           />}
 
@@ -784,8 +834,9 @@ const mapStateToProps = ({
   },
   notifications: { intercomNotificationsCount },
   wallet: { backupStatus },
-  featureFlags: { data: { SMART_WALLET_ENABLED: smartWalletFeatureEnabled } },
+  featureFlags: { data: { SMART_WALLET_ENABLED: smartWalletFeatureEnabled, CRUXPAY_ENABLED: cruxPayFeatureEnabled } },
   accounts: { data: accounts },
+  cruxPay,
 }) => ({
   user,
   baseFiatCurrency,
@@ -795,8 +846,10 @@ const mapStateToProps = ({
   backupStatus,
   useBiometrics,
   smartWalletFeatureEnabled,
+  cruxPayFeatureEnabled,
   userJoinedBeta,
   accounts,
+  cruxPay,
 });
 
 const mapDispatchToProps = (dispatch: Function) => ({

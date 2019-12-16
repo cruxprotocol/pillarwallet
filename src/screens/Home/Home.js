@@ -18,7 +18,7 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 import * as React from 'react';
-import { Animated, RefreshControl, Platform, View, ScrollView, FlatList } from 'react-native';
+import { Animated, RefreshControl, Platform, View, ScrollView, FlatList, Clipboard } from 'react-native';
 import { connect } from 'react-redux';
 import isEqual from 'lodash.isequal';
 import type { NavigationScreenProp, NavigationEventSubscription } from 'react-navigation';
@@ -29,7 +29,7 @@ import Intercom from 'react-native-intercom';
 // components
 import ActivityFeed from 'components/ActivityFeed';
 import styled from 'styled-components/native';
-import { MediumText } from 'components/Typography';
+import { BaseText, BoldText, MediumText, TextLink } from 'components/Typography';
 import Tabs from 'components/Tabs';
 import QRCodeScanner from 'components/QRCodeScanner';
 import ContainerWithHeader from 'components/Layout/ContainerWithHeader';
@@ -76,7 +76,7 @@ import { accountHistorySelector } from 'selectors/history';
 import { accountCollectiblesHistorySelector } from 'selectors/collectibles';
 
 // utils
-import { baseColors, spacing, fontStyles } from 'utils/variables';
+import { baseColors, spacing, fontStyles, fontSizes, UIColors } from 'utils/variables';
 import { mapTransactionsHistory, mapOpenSeaAndBCXTransactionsHistory } from 'utils/feedData';
 import { filterSessionsByUrl } from 'screens/ManageDetailsSessions';
 
@@ -136,6 +136,19 @@ const BalanceWrapper = styled.View`
   width: 100%;
   border-bottom-width: 1px;
   border-color: ${baseColors.mediumLightGray};
+`;
+
+const CruxIDStateWrapper = styled.View`
+  padding: ${spacing.medium}px ${spacing.large}px;
+  width: 100%;
+  border-bottom-width: 1px;
+  border-color: ${baseColors.mediumLightGray};
+`;
+
+const CopyCruxIDLink = styled.TouchableOpacity`
+  margin-top: ${spacing.small}px;
+  margin-bottom: ${spacing.small}px;
+  align-items: flex-start;
 `;
 
 const WalletConnectWrapper = styled.View`
@@ -300,6 +313,14 @@ class HomeScreen extends React.Component<Props, State> {
     this.setState({ tabIsChanging: isChanging });
   };
 
+  handleCopyCruxIDToClipboard = () => {
+    const {
+      cruxPay,
+    } = this.props;
+    Clipboard.setString(cruxPay.cruxID);
+    Toast.show({ message: 'CruxID copied to clipboard', type: 'success', title: 'Success' });
+  };
+
   render() {
     const {
       cancelInvitation,
@@ -318,6 +339,7 @@ class HomeScreen extends React.Component<Props, State> {
       accounts,
       userEvents,
       badgesEvents,
+      cruxPay,
     } = this.props;
 
     const {
@@ -400,6 +422,8 @@ class HomeScreen extends React.Component<Props, State> {
     const sessionsLabel = sessionsCount ? `${sessionsCount} ${sessionsLabelPart}` : '';
 
     const badgesContainerStyle = !badges.length ? { width: '100%', justifyContent: 'center' } : {};
+    // CRUXPAY
+    const isCruxIdPresent = !!cruxPay.cruxID;
 
     return (
       <ContainerWithHeader
@@ -444,6 +468,24 @@ class HomeScreen extends React.Component<Props, State> {
           <BalanceWrapper>
             <PortfolioBalance />
           </BalanceWrapper>
+          {isCruxIdPresent &&
+            <CruxIDStateWrapper>
+              <View>
+                <BoldText>Your cruxID: </BoldText>
+                <CopyCruxIDLink onPress={this.handleCopyCruxIDToClipboard}>
+                  <TextLink>{cruxPay.cruxID}</TextLink>
+                </CopyCruxIDLink>
+                <BaseText style={{
+                  color: UIColors.defaultTextColor,
+                  fontSize: fontSizes.regular,
+                }}
+                >
+                  <BoldText>Status: </BoldText>
+                  {cruxPay.status.status}
+                </BaseText>
+              </View>
+            </CruxIDStateWrapper>
+          }
           <WalletConnectWrapper>
             <SettingsItemCarded
               title="Manage Sessions"
@@ -516,6 +558,7 @@ const mapStateToProps = ({
   accounts: { data: accounts },
   session: { data: { isOnline } },
   userEvents: { data: userEvents },
+  cruxPay,
 }) => ({
   contacts,
   user,
@@ -529,6 +572,7 @@ const mapStateToProps = ({
   accounts,
   isOnline,
   userEvents,
+  cruxPay,
 });
 
 const structuredSelector = createStructuredSelector({

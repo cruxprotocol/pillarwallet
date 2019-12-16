@@ -350,28 +350,6 @@ class WalletView extends React.Component<Props, State> {
     });
   };
 
-
-  navigateToCruxRegistration = (isCruxIdPresent) => {
-    const { navigation, cruxPay } = this.props;
-    let isManagementAllowed = false;
-    if (isCruxIdPresent && cruxPay.status && cruxPay.status.status === 'DONE') {
-      isManagementAllowed = true;
-    }
-    if (!isCruxIdPresent) {
-      navigation.navigate(CRUXPAY_INTRO);
-    }
-    if (!isManagementAllowed) {
-      Toast.show({
-        title: null,
-        message: 'Your CruxID is still being propograted. Management will be available in few hours.',
-        type: 'info',
-        autoClose: true,
-      });
-      return;
-    }
-    navigation.navigate(CRUXPAY_INTRO);
-  };
-
   render() {
     const {
       query,
@@ -533,12 +511,13 @@ class WalletView extends React.Component<Props, State> {
               bordered
               addon={(<LabelBadge label="NEW" />)}
             />}
+            {!isCruxIdPresent &&
             <ListItemChevron
-              label={isCruxIdPresent ? `Manage your CruxID: ${cruxPay.cruxID}` : 'Setup CruxPay'}
-              onPress={() => this.navigateToCruxRegistration(isCruxIdPresent)}
+              label="Setup CruxPay"
+              onPress={() => navigation.navigate(CRUXPAY_INTRO)}
               bordered
               addon={(<LabelBadge label="NEW" />)}
-            />
+            />}
           </ActionsWrapper>}
         </ListWrapper>}
       </CustomKAWrapper>
