@@ -33,7 +33,7 @@ class InMemStorage extends CruxPay.storage.StorageService {
 }
 
 const getCruxWebViewInput = async (cruxPay, inputExtension) => {
-  const { getAssetMap, getAddressMap, walletClientName,  } = cruxPay.cruxClient;
+  const { getAssetMap, getAddressMap, walletClientName } = cruxPay.cruxClient;
   const assetMap = await getAssetMap();
   const assetDetailList = map(assetMap, (value, key) => {
     return value;
@@ -57,8 +57,19 @@ const getCruxWebViewInput = async (cruxPay, inputExtension) => {
   return currentInputData;
 };
 
+const getCruxPaySubdomain = (input) => {
+  return input.split('@')[0];
+};
+
+// TODO: ask js-sdk to export this
+const isValidCruxID = (input) => {
+  return input.includes('crux') && input.includes('@') && getCruxPaySubdomain(input).length > 3;
+};
+
 export {
   CruxStorageService,
   InMemStorage,
   getCruxWebViewInput,
+  isValidCruxID,
+  getCruxPaySubdomain,
 };

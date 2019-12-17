@@ -31,7 +31,7 @@ import { accountAssetsSelector } from 'selectors/assets';
 import { Alert } from 'react-native';
 
 // service
-import { getCruxWebViewInput } from 'services/cruxPay';
+import { getCruxWebViewInput, getCruxPaySubdomain } from 'services/cruxPay';
 
 // type
 import type { Assets } from 'models/Asset';
@@ -90,7 +90,6 @@ class CruxPayRegistration extends React.PureComponent<Props, State> {
     // TODO: discuss what to do if a few failed?
     await this.props.loadCruxIDState();
     const { navigation, cruxPay } = this.props;
-    await this.props.loadCruxIDState(false);
     Alert.alert(
       'Registration Success',
       `Your cruxID: ${cruxPay.cruxID} is being updated. It takes about 3-4 hours to complete registration on blockchain.`,
@@ -104,11 +103,9 @@ class CruxPayRegistration extends React.PureComponent<Props, State> {
     // TODO: discuss what to do if a few failed?
     await this.props.loadCruxIDState();
     const { navigation, cruxPay } = this.props;
-    await this.props.loadCruxIDState(false);
     Alert.alert(
       'Update CruxPay Addresses',
-      `Your cruxID: ${cruxPay.cruxID} is being updated. 
-      It takes about 3-4 hours to complete registration on blockchain.`,
+      `Your cruxID: ${cruxPay.cruxID} is has been updated!`,
       [
         { text: 'OK', onPress: () => navigation.navigate(ASSETS) },
       ],
@@ -125,7 +122,7 @@ class CruxPayRegistration extends React.PureComponent<Props, State> {
     const inputExtension = {
       availableCurrencies,
       theme: '#3742fa',
-      cruxIDSubdomain: cruxPay.cruxID || '',
+      cruxIDSubdomain: getCruxPaySubdomain(cruxPay.cruxID) || '',
       suggestedCruxIDSubdomain: user.username,
     };
     getCruxWebViewInput(cruxPay, inputExtension).then((currentInputData) => {

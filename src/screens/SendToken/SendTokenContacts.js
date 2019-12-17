@@ -48,12 +48,14 @@ import type { Account, Accounts } from 'models/Account';
 import type { ContactSmartAddressData } from 'models/Contacts';
 import type { BlockchainNetwork } from 'models/BlockchainNetwork';
 import { activeAccountSelector } from 'selectors';
+import { isValidCruxID } from 'services/cruxPay';
 
 type Props = {
   navigation: NavigationScreenProp<*>,
   accounts: Accounts,
   localContacts: Object[],
   wallet: Object,
+  cruxPay: Object,
   navigateToSendTokenAmount: Function,
   contactsSmartAddressesSynced: boolean,
   syncContactsSmartAddresses: Function,
@@ -69,11 +71,13 @@ type State = {
     address: string,
   },
   formStructure: t.struct,
+  cruxAccount: Object,
 };
 
 const qrCode = require('assets/images/qr.png');
 const keyWalletIcon = require('assets/icons/icon_ethereum_network.png');
 const smartWalletIcon = require('assets/icons/icon_smart_wallet.png');
+const cruxPayIcon = require('assets/icons/icon_cruxpay.png');
 
 const FormWrapper = styled.View`
   padding: ${spacing.mediumLarge}px ${spacing.large}px 6px;
@@ -96,13 +100,13 @@ function AddressInputTemplate(locals) {
   const inputProps = {
     onChange: locals.onChange,
     onBlur: locals.onBlur,
-    placeholder: 'Username or wallet address',
+    placeholder: 'Username, CruxID or wallet address',
     value: locals.value,
     keyboardType: locals.keyboardType,
     textAlign: 'left',
     maxLength: 42,
     letterSpacing: 0.1,
-    fontSize: fontSizes.medium,
+    fontSize: fontSizes.small,
   };
   return (
     <SingleInput
@@ -157,6 +161,7 @@ class SendTokenContacts extends React.Component<Props, State> {
       isScanning: false,
       value: { address: '' },
       formStructure: getFormStructure(this.props.wallet.address),
+      cruxAccount: {},
     };
   }
 
@@ -167,7 +172,25 @@ class SendTokenContacts extends React.Component<Props, State> {
     }
   }
 
-  handleChange = (value: Object) => {
+  handleError(error: any) {
+    console.error('CruxPay handleError: ', error);
+  }
+
+  handleChange = async (value: Object) => {
+    const potentialCruxAddress = value.address;
+    if (isValidCruxID(potentialCruxAddress)) {
+      const { cruxPay } = this.props;
+      const { resolveCurrencyAddressForCruxID } = cruxPay.cruxClient;
+      await resolveCurrencyAddressForCruxID(potentialCruxAddress, 'ETH')
+        .then((resolvedAddress) => {
+          const resolvedCruxAccount = {
+            address: resolvedAddress.addressHash,
+            username: potentialCruxAddress,
+          };
+          this.setState({ cruxAccount: resolvedCruxAccount });
+        })
+        .catch(this.handleError);
+    }
     this.setState({ value });
   };
 
@@ -249,6 +272,24 @@ class SendTokenContacts extends React.Component<Props, State> {
     );
   };
 
+  formatCruxAccounts = (cruxAccount) => {
+    return [];
+    if (!cruxAccount) {
+      return [];
+    }
+    return [
+      {
+        username: cruxAccount.cruxID,
+        ethAddress: cruxAccount.address,
+        profileImage: cruxPayIcon,
+        hasSmartWallet: false,
+        isUserAccount: false,
+        type: null,
+        sortToTop: true,
+      },
+    ];
+  };
+
   navigateToNextScreen(ethAddress) {
     if (this.assetData.tokenType === COLLECTIBLES) {
       this.props.navigation.navigate(SEND_COLLECTIBLE_CONFIRM, {
@@ -273,7 +314,7 @@ class SendTokenContacts extends React.Component<Props, State> {
       isOnline,
       accounts,
     } = this.props;
-    const { isScanning, formStructure, value } = this.state;
+    const { isScanning, formStructure, value, cruxAccount } = this.state;
     const isSearchQueryProvided = !!(value && value.address.length);
     const formOptions = generateFormOptions({ onIconPress: this.handleQRScannerOpen });
 
@@ -285,10 +326,12 @@ class SendTokenContacts extends React.Component<Props, State> {
       isUserAccount: true,
     }));
 
+    const formattedCruxAccounts = this.formatCruxAccounts(cruxAccount);
+
     // asset transfer between user accounts only in regular, but not in PPN send flow
     let contactsToRender = this.isPPNTransaction
-      ? [...localContacts]
-      : [...userAccounts, ...localContacts];
+      ? [...localContacts, ...formattedCruxAccounts]
+      : [...userAccounts, ...localContacts, ...formattedCruxAccounts];
     if (isSearchQueryProvided) {
       const searchStr = value.address.toLowerCase();
       contactsToRender = contactsToRender.filter(({ username, ethAddress }) => {
@@ -372,6 +415,7 @@ const mapStateToProps = ({
   wallet: { data: wallet },
   session: { data: { contactsSmartAddressesSynced, isOnline } },
   blockchainNetwork: { data: blockchainNetworks },
+  cruxPay,
 }) => ({
   accounts,
   localContacts,
@@ -380,6 +424,7 @@ const mapStateToProps = ({
   contactsSmartAddressesSynced,
   isOnline,
   blockchainNetworks,
+  cruxPay,
 });
 
 const structuredSelector = createStructuredSelector({
