@@ -48,7 +48,8 @@ import type { Account, Accounts } from 'models/Account';
 import type { ContactSmartAddressData } from 'models/Contacts';
 import type { BlockchainNetwork } from 'models/BlockchainNetwork';
 import { activeAccountSelector } from 'selectors';
-import { isValidCruxID } from 'services/cruxPay';
+import { isValidCruxID, CruxClientError } from 'services/cruxPay';
+import { HelpText } from 'components/Typography';
 
 type Props = {
   navigation: NavigationScreenProp<*>,
@@ -100,7 +101,7 @@ function AddressInputTemplate(locals) {
   const inputProps = {
     onChange: locals.onChange,
     onBlur: locals.onBlur,
-    placeholder: 'Username, CruxID or wallet address',
+    placeholder: 'Username, Crux ID or wallet address',
     value: locals.value,
     keyboardType: locals.keyboardType,
     textAlign: 'left',
@@ -161,7 +162,11 @@ class SendTokenContacts extends React.Component<Props, State> {
       isScanning: false,
       value: { address: '' },
       formStructure: getFormStructure(this.props.wallet.address),
-      cruxAccount: {},
+      cruxAccount: {
+        cruxID: null,
+        valid: false,
+        address: '',
+      },
     };
   }
 
@@ -177,19 +182,40 @@ class SendTokenContacts extends React.Component<Props, State> {
   }
 
   handleChange = async (value: Object) => {
+    const isCruxEnabled = this.assetData.tokenType !== COLLECTIBLES;
     const potentialCruxAddress = value.address;
-    if (isValidCruxID(potentialCruxAddress)) {
+    if (isCruxEnabled && isValidCruxID(potentialCruxAddress)) {
       const { cruxPay } = this.props;
       const { resolveCurrencyAddressForCruxID } = cruxPay.cruxClient;
-      await resolveCurrencyAddressForCruxID(potentialCruxAddress, 'ETH')
-        .then((resolvedAddress) => {
+      const currency = this.assetData.token;
+      try {
+        const resolvedAddress = await resolveCurrencyAddressForCruxID(potentialCruxAddress, currency);
+        const resolvedCruxAccount = {
+          address: resolvedAddress.addressHash,
+          cruxID: potentialCruxAddress,
+          valid: true,
+        };
+        this.setState({ cruxAccount: resolvedCruxAccount });
+      } catch (e) {
+        if (e instanceof CruxClientError) {
+          console.log(`${e.errorCode}: ${e.message}`);
           const resolvedCruxAccount = {
-            address: resolvedAddress.addressHash,
-            username: potentialCruxAddress,
+            address: '',
+            cruxID: potentialCruxAddress,
+            valid: false,
           };
           this.setState({ cruxAccount: resolvedCruxAccount });
-        })
-        .catch(this.handleError);
+        } else {
+          throw e; // let others bubble up
+        }
+      }
+    } else {
+      const defaultCruxAccount = {
+        address: '',
+        cruxID: null,
+        valid: false,
+      };
+      this.setState({ cruxAccount: defaultCruxAccount });
     }
     this.setState({ value });
   };
@@ -228,6 +254,7 @@ class SendTokenContacts extends React.Component<Props, State> {
       username,
       hasSmartWallet,
       ethAddress,
+      isCruxID,
     } = user;
     if (this.isPPNTransaction && !hasSmartWallet) {
       Alert.alert(
@@ -242,7 +269,8 @@ class SendTokenContacts extends React.Component<Props, State> {
       );
       return;
     }
-    this.navigateToNextScreen(ethAddress);
+    const cruxID = isCruxID ? username : undefined;
+    this.navigateToNextScreen(ethAddress, cruxID);
   };
 
   renderContact = ({ item: user }) => {
@@ -252,12 +280,15 @@ class SendTokenContacts extends React.Component<Props, State> {
       profileImage,
       isUserAccount,
       type,
+      isCruxID,
     } = user;
 
     const customProps = {};
     if (isUserAccount) {
       customProps.itemImageSource = type === ACCOUNT_TYPES.KEY_BASED ? keyWalletIcon : smartWalletIcon;
       customProps.noImageBorder = true;
+    } else if (isCruxID) {
+      customProps.itemImageSource = cruxPayIcon;
     } else {
       customProps.avatarUrl = profileImage;
     }
@@ -272,25 +303,23 @@ class SendTokenContacts extends React.Component<Props, State> {
     );
   };
 
-  formatCruxAccounts = (cruxAccount) => {
-    return [];
-    if (!cruxAccount) {
-      return [];
-    }
-    return [
-      {
+  formatCruxAccountToContacts = (cruxAccount) => {
+    if (cruxAccount.cruxID && cruxAccount.valid) {
+      return {
         username: cruxAccount.cruxID,
         ethAddress: cruxAccount.address,
-        profileImage: cruxPayIcon,
         hasSmartWallet: false,
         isUserAccount: false,
+        isCruxID: true,
         type: null,
         sortToTop: true,
-      },
-    ];
+        // id: '83b5f268-7900-48d1-ae4b-6917a97e362f',
+      };
+    }
+    return null;
   };
 
-  navigateToNextScreen(ethAddress) {
+  navigateToNextScreen(ethAddress, cruxID) {
     if (this.assetData.tokenType === COLLECTIBLES) {
       this.props.navigation.navigate(SEND_COLLECTIBLE_CONFIRM, {
         assetData: this.assetData,
@@ -303,6 +332,7 @@ class SendTokenContacts extends React.Component<Props, State> {
       assetData: this.assetData,
       receiver: ethAddress,
       source: 'Contact',
+      cruxID,
     });
   }
 
@@ -326,12 +356,10 @@ class SendTokenContacts extends React.Component<Props, State> {
       isUserAccount: true,
     }));
 
-    const formattedCruxAccounts = this.formatCruxAccounts(cruxAccount);
-
     // asset transfer between user accounts only in regular, but not in PPN send flow
     let contactsToRender = this.isPPNTransaction
-      ? [...localContacts, ...formattedCruxAccounts]
-      : [...userAccounts, ...localContacts, ...formattedCruxAccounts];
+      ? [...localContacts]
+      : [...userAccounts, ...localContacts];
     if (isSearchQueryProvided) {
       const searchStr = value.address.toLowerCase();
       contactsToRender = contactsToRender.filter(({ username, ethAddress }) => {
@@ -343,6 +371,10 @@ class SendTokenContacts extends React.Component<Props, State> {
     }
 
     if (contactsSmartAddresses) {
+      const formattedCruxAccounts = this.formatCruxAccountToContacts(cruxAccount);
+      if (formattedCruxAccounts) {
+        contactsToRender.push(formattedCruxAccounts);
+      }
       contactsToRender = contactsToRender
         .map(contact => {
           const { smartWallets = [] } = contactsSmartAddresses.find(
@@ -381,6 +413,11 @@ class SendTokenContacts extends React.Component<Props, State> {
             onBlur={this.handleChange}
             value={value}
           />
+          {!!cruxAccount.cruxID && !cruxAccount.valid &&
+          <HelpText style={{ color: baseColors.redDamask }}>
+            {cruxAccount.cruxID} is invalid Crux ID
+          </HelpText>
+          }
         </FormWrapper>
         {showSpinner && <Container center><Spinner /></Container>}
         {!!contactsToRender.length &&

@@ -5,6 +5,9 @@ import map from 'lodash.map';
 import Storage from 'services/storage';
 import { CruxPay } from '@cruxpay/rn-sdk';
 
+const { CruxClientError } = CruxPay.errors;
+
+
 const storage = Storage.getInstance('db');
 
 class CruxStorageService extends CruxPay.storage.StorageService {
@@ -66,10 +69,12 @@ const isValidCruxID = (input) => {
   return input.includes('crux') && input.includes('@') && getCruxPaySubdomain(input).length > 3;
 };
 
+
 export {
   CruxStorageService,
   InMemStorage,
   getCruxWebViewInput,
   isValidCruxID,
   getCruxPaySubdomain,
+  CruxClientError,
 };

@@ -67,10 +67,12 @@ const Value = styled(MediumText)`
 
 class SendTokenConfirm extends React.Component<Props, State> {
   source: string;
+  cruxID: string;
 
   constructor(props) {
     super(props);
     this.source = this.props.navigation.getParam('source', '');
+    this.cruxID = this.props.navigation.getParam('cruxID', '');
     this.state = {
       note: null,
     };
@@ -136,6 +138,12 @@ class SendTokenConfirm extends React.Component<Props, State> {
           <LabeledRow>
             <Label>Recipient</Label>
             <Value>{getAccountName(userAccount.type, accounts)}</Value>
+          </LabeledRow>
+          }
+          {!!this.cruxID &&
+          <LabeledRow>
+            <Label>Recipient Crux ID</Label>
+            <Value>{this.cruxID}</Value>
           </LabeledRow>
           }
           <LabeledRow>

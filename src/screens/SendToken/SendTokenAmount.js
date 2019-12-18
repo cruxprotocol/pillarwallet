@@ -164,11 +164,13 @@ class SendTokenAmount extends React.Component<Props, State> {
   formSubmitted: boolean = false;
   receiver: string;
   source: string;
+  cruxID: string;
 
   constructor(props: Props) {
     super(props);
     this.assetData = this.props.navigation.getParam('assetData', {});
     this.receiver = this.props.navigation.getParam('receiver', '');
+    this.cruxID = this.props.navigation.getParam('cruxID', '');
     this.source = this.props.navigation.getParam('source', '');
 
     this.state = {
@@ -253,6 +255,7 @@ class SendTokenAmount extends React.Component<Props, State> {
     this.setState({ submitPressed: false }, () => {
       navigation.navigate(SEND_TOKEN_CONFIRM, {
         transactionPayload,
+        cruxID: this.cruxID,
         source: this.source,
       });
     });

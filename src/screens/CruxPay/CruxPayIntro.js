@@ -21,11 +21,12 @@ import * as React from 'react';
 import styled from 'styled-components/native';
 import type { NavigationScreenProp } from 'react-navigation';
 import { connect } from 'react-redux';
+import { Linking } from 'react-native';
 import { CachedImage } from 'react-native-cached-image';
 
 import ContainerWithHeader from 'components/Layout/ContainerWithHeader';
 import { ScrollWrapper, Wrapper } from 'components/Layout';
-import { MediumText, BoldText } from 'components/Typography';
+import { MediumText, BoldText, TextLink } from 'components/Typography';
 import Button from 'components/Button';
 
 import { baseColors, fontStyles } from 'utils/variables';
@@ -73,7 +74,7 @@ const FeatureIcon = styled(CachedImage)`
   margin-bottom: 24px;
 `;
 
-const CruxPayIcon = require('assets/images/logo_cruxpay.jpg');
+const CruxPayIcon = require('assets/images/logo_cruxpay.png');
 
 class CruxPayIntro extends React.PureComponent<Props, State> {
   render() {
@@ -94,7 +95,7 @@ class CruxPayIntro extends React.PureComponent<Props, State> {
           <CustomWrapper>
             <FeatureIcon source={CruxPayIcon} />
             <Title>
-              Crux Pay
+              CruxPay
             </Title>
             <BodyText>
               CruxPay is a protocol which aims to link any blockchain address to a human-readable name, and let users
@@ -108,12 +109,17 @@ class CruxPayIntro extends React.PureComponent<Props, State> {
             <BodyText>
               Registering CruxID may take several hours.
             </BodyText>
+            <BodyText>
+              Visit <TextLink onPress={() => Linking.openURL('https://cruxpay.com')}>
+                https://cruxpay.com
+            </TextLink> for more information.
+            </BodyText>
           </CustomWrapper>
           <ButtonWrapper>
             <Button
               block
               title={isDeployed ? 'Manage Address' : 'Setup CruxPay'}
-              onPress={() => navigation.navigate(CRUXPAY_REGISTRATION, { deploy: true })}
+              onPress={() => navigation.navigate(CRUXPAY_REGISTRATION, { backNavivation: true })}
               style={{
                 backgroundColor: baseColors.persianBlue,
                 marginTop: 40,

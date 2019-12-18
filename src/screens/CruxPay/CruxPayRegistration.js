@@ -37,7 +37,7 @@ import { getCruxWebViewInput, getCruxPaySubdomain } from 'services/cruxPay';
 import type { Assets } from 'models/Asset';
 
 // constants
-import { CRUXPAY_INTRO, ASSETS } from 'constants/navigationConstants';
+import { CRUXPAY_INTRO, HOME } from 'constants/navigationConstants';
 
 // actions
 import { setBrowsingWebViewAction } from 'actions/appSettingsActions';
@@ -75,7 +75,7 @@ class CruxPayRegistration extends React.PureComponent<Props, State> {
       'Cancel CruxPay Setup',
       'Are you sure you want to cancel the setup?',
       [
-        { text: 'Yes', onPress: () => navigation.navigate(CRUXPAY_INTRO) },
+        { text: 'Yes', onPress: () => navigation.goBack() },
         { text: 'No', style: 'cancel' },
       ],
       { cancelable: true },
@@ -94,7 +94,7 @@ class CruxPayRegistration extends React.PureComponent<Props, State> {
       'Registration Success',
       `Your cruxID: ${cruxPay.cruxID} is being updated. It takes about 3-4 hours to complete registration on blockchain.`,
       [
-        { text: 'OK', onPress: () => navigation.navigate(ASSETS) },
+        { text: 'OK', onPress: () => navigation.navigate(HOME) },
       ],
     );
   };
@@ -107,7 +107,7 @@ class CruxPayRegistration extends React.PureComponent<Props, State> {
       'Update CruxPay Addresses',
       `Your cruxID: ${cruxPay.cruxID} is has been updated!`,
       [
-        { text: 'OK', onPress: () => navigation.navigate(ASSETS) },
+        { text: 'OK', onPress: () => navigation.navigate(HOME) },
       ],
     );
   };
@@ -122,7 +122,7 @@ class CruxPayRegistration extends React.PureComponent<Props, State> {
     const inputExtension = {
       availableCurrencies,
       theme: '#3742fa',
-      cruxIDSubdomain: getCruxPaySubdomain(cruxPay.cruxID) || '',
+      cruxIDSubdomain: cruxPay.cruxID ? getCruxPaySubdomain(cruxPay.cruxID) : '',
       suggestedCruxIDSubdomain: user.username,
     };
     getCruxWebViewInput(cruxPay, inputExtension).then((currentInputData) => {
