@@ -29,7 +29,7 @@ import { ScrollWrapper, Wrapper } from 'components/Layout';
 import { MediumText, BoldText, TextLink } from 'components/Typography';
 import Button from 'components/Button';
 
-import { baseColors, fontStyles } from 'utils/variables';
+import { baseColors, fontStyles, spacing } from 'utils/variables';
 import { responsiveSize } from 'utils/ui';
 
 
@@ -48,11 +48,11 @@ type State = {
 
 const CustomWrapper = styled.View`
   flex: 1;
-  padding: 20px 55px 20px 46px;
+  padding: ${spacing.large}px 40px ${spacing.large}px 40px;
 `;
 
 const Title = styled(BoldText)`
-  color: ${baseColors.persianBlue};
+  color: ${baseColors.black};
   ${fontStyles.rJumbo};
 `;
 
@@ -63,15 +63,19 @@ const BodyText = styled(MediumText)`
 `;
 
 const ButtonWrapper = styled(Wrapper)`
-  margin: 30px 0 50px;
-  padding: 0 46px;
+  margin: 20px 20px;
+  padding: 0 0;
 `;
 
-
 const FeatureIcon = styled(CachedImage)`
-  height: 124px;
-  width: 124px;
-  margin-bottom: 24px;
+  height: 64px;
+  width: 64px;
+  margin-bottom: ${spacing.large}px;
+`;
+
+const InlineIconTitle = styled.View`
+  flex: 1;
+  flex-direction: row;
 `;
 
 const CruxPayIcon = require('assets/images/logo_cruxpay.png');
@@ -81,7 +85,6 @@ class CruxPayIntro extends React.PureComponent<Props, State> {
     const {
       navigation,
     } = this.props;
-    const isDeployed = navigation.getParam('deploy', false);
 
     return (
       <ContainerWithHeader
@@ -93,33 +96,32 @@ class CruxPayIntro extends React.PureComponent<Props, State> {
       >
         <ScrollWrapper contentContainerStyle={{ paddingTop: 80 }}>
           <CustomWrapper>
-            <FeatureIcon source={CruxPayIcon} />
-            <Title>
-              CruxPay
-            </Title>
+            <InlineIconTitle>
+              <FeatureIcon source={CruxPayIcon} />
+              <Title>
+                CruxPay
+              </Title>
+            </InlineIconTitle>
             <BodyText>
               CruxPay is a protocol which aims to link any blockchain address to a human-readable name, and let users
               interact with each other and dApps with ease.
             </BodyText>
             <BodyText>
-              Clicking setup below registers your CruxID and ties it with your account. After registration is completed,
-              you can manage your CruxID account directly from manage section. Be noted that all address selected
-              would now be publicly exposed.
+              Clicking setup below registers your CRUX ID and ties it with your account. After registration
+              is completed, you can manage your CRUX ID account directly from manage section in settings.
+              Be noted that all address selected would now be publicly exposed.
             </BodyText>
             <BodyText>
-              Registering CruxID may take several hours.
-            </BodyText>
-            <BodyText>
-              Visit <TextLink onPress={() => Linking.openURL('https://cruxpay.com')}>
+              For more information, visit <TextLink onPress={() => Linking.openURL('https://cruxpay.com')}>
                 https://cruxpay.com
-            </TextLink> for more information.
+            </TextLink>
             </BodyText>
           </CustomWrapper>
           <ButtonWrapper>
             <Button
               block
-              title={isDeployed ? 'Manage Address' : 'Setup CruxPay'}
-              onPress={() => navigation.navigate(CRUXPAY_REGISTRATION, { backNavivation: true })}
+              title="Setup CruxPay"
+              onPress={() => navigation.navigate(CRUXPAY_REGISTRATION, { pageTitle: 'Register CruxPay' })}
               style={{
                 backgroundColor: baseColors.persianBlue,
                 marginTop: 40,

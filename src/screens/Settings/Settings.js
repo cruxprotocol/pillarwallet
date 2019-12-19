@@ -61,7 +61,6 @@ import {
   CHANGE_PIN_FLOW,
   BACKUP_WALLET_IN_SETTINGS_FLOW,
   REVEAL_BACKUP_PHRASE,
-  CRUXPAY_INTRO,
   CRUXPAY_REGISTRATION,
 } from 'constants/navigationConstants';
 import { supportedFiatCurrencies, defaultFiatCurrency } from 'constants/assetsConstants';
@@ -111,6 +110,7 @@ type Props = {
   lockScreen: () => void,
   logoutUser: () => void,
   accounts: Accounts,
+  cruxPay: Object,
 }
 
 const storage = Storage.getInstance('db');
@@ -300,8 +300,8 @@ const formCruxPayItems = (that, cruxID) => {
   return [
     {
       key: 'manageCruxPay',
-      title: 'Manage your CruxID',
-      body: `configure ${cruxID}`,
+      title: 'Manage your CRUX ID',
+      body: `Configure ${cruxID}`,
       onPress: that.navigateToCruxRegistration,
       label: 'new',
       minHeight: 96,
@@ -455,25 +455,20 @@ class Settings extends React.Component<Props, State> {
 
   navigateToCruxRegistration = () => {
     const { navigation, cruxPay } = this.props;
-    const isCruxIdPresent = !!cruxPay.cruxID;
     let isManagementAllowed = false;
-    if (isCruxIdPresent && cruxPay.status && cruxPay.status.status === 'DONE') {
+    if (cruxPay.status && cruxPay.status.status === 'DONE') {
       isManagementAllowed = true;
-    }
-    if (!isCruxIdPresent) {
-      navigation.navigate(CRUXPAY_INTRO);
-      return;
     }
     if (!isManagementAllowed) {
       Toast.show({
-        title: 'Manage CruxID unavailable',
-        message: 'Your CruxID is still being propagated. Management will be available in few hours.',
+        title: 'Manage CRUX ID Unavailable',
+        message: 'Your CRUX ID is still being propagated. Management will be available in few hours.',
         type: 'info',
         autoClose: true,
       });
       return;
     }
-    navigation.navigate(CRUXPAY_REGISTRATION);
+    navigation.navigate(CRUXPAY_REGISTRATION, { pageTitle: 'Manage CruxPay' });
   };
 
   lockWallet = () => {

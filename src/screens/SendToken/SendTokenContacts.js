@@ -68,6 +68,7 @@ type Props = {
 
 type State = {
   isScanning: boolean,
+  isResolvingCruxId: boolean,
   value: {
     address: string,
   },
@@ -101,7 +102,7 @@ function AddressInputTemplate(locals) {
   const inputProps = {
     onChange: locals.onChange,
     onBlur: locals.onBlur,
-    placeholder: 'Username, Crux ID or wallet address',
+    placeholder: 'Username, CRUX ID or wallet address',
     value: locals.value,
     keyboardType: locals.keyboardType,
     textAlign: 'left',
@@ -160,11 +161,13 @@ class SendTokenContacts extends React.Component<Props, State> {
     this.isPPNTransaction = isPillarPaymentNetworkActive(blockchainNetworks);
     this.state = {
       isScanning: false,
+      isResolvingCruxId: false,
       value: { address: '' },
       formStructure: getFormStructure(this.props.wallet.address),
       cruxAccount: {
         cruxID: null,
         valid: false,
+        resolveErrorMessage: '',
         address: '',
       },
     };
@@ -177,14 +180,11 @@ class SendTokenContacts extends React.Component<Props, State> {
     }
   }
 
-  handleError(error: any) {
-    console.error('CruxPay handleError: ', error);
-  }
-
   handleChange = async (value: Object) => {
     const isCruxEnabled = this.assetData.tokenType !== COLLECTIBLES;
     const potentialCruxAddress = value.address;
     if (isCruxEnabled && isValidCruxID(potentialCruxAddress)) {
+      this.setState({ isResolvingCruxId: true });
       const { cruxPay } = this.props;
       const { resolveCurrencyAddressForCruxID } = cruxPay.cruxClient;
       const currency = this.assetData.token;
@@ -196,15 +196,23 @@ class SendTokenContacts extends React.Component<Props, State> {
           valid: true,
         };
         this.setState({ cruxAccount: resolvedCruxAccount });
+        this.setState({ isResolvingCruxId: false });
       } catch (e) {
         if (e instanceof CruxClientError) {
           console.log(`${e.errorCode}: ${e.message}`);
+          let resolveErrorMessage = `${potentialCruxAddress} is invalid CRUX ID`;
+          // Reference https://github.com/cruxprotocol/js-sdk/blob/master/error-handling.md
+          if (e.errorCode === 1005) {
+            resolveErrorMessage = `${currency} address not available for user`;
+          }
           const resolvedCruxAccount = {
             address: '',
             cruxID: potentialCruxAddress,
             valid: false,
+            resolveErrorMessage,
           };
           this.setState({ cruxAccount: resolvedCruxAccount });
+          this.setState({ isResolvingCruxId: false });
         } else {
           throw e; // let others bubble up
         }
@@ -214,8 +222,10 @@ class SendTokenContacts extends React.Component<Props, State> {
         address: '',
         cruxID: null,
         valid: false,
+        resolveErrorMessage: '',
       };
       this.setState({ cruxAccount: defaultCruxAccount });
+      this.setState({ isResolvingCruxId: false });
     }
     this.setState({ value });
   };
@@ -313,7 +323,6 @@ class SendTokenContacts extends React.Component<Props, State> {
         isCruxID: true,
         type: null,
         sortToTop: true,
-        // id: '83b5f268-7900-48d1-ae4b-6917a97e362f',
       };
     }
     return null;
@@ -344,7 +353,13 @@ class SendTokenContacts extends React.Component<Props, State> {
       isOnline,
       accounts,
     } = this.props;
-    const { isScanning, formStructure, value, cruxAccount } = this.state;
+    const {
+      isScanning,
+      formStructure,
+      value,
+      cruxAccount,
+      isResolvingCruxId,
+    } = this.state;
     const isSearchQueryProvided = !!(value && value.address.length);
     const formOptions = generateFormOptions({ onIconPress: this.handleQRScannerOpen });
 
@@ -398,11 +413,16 @@ class SendTokenContacts extends React.Component<Props, State> {
     }
 
     const tokenName = this.assetData.tokenType === COLLECTIBLES ? this.assetData.name : this.assetData.token;
-    const showSpinner = isOnline && !contactsSmartAddressesSynced && !isEmpty(localContacts);
+    const showSpinner = (isOnline && !contactsSmartAddressesSynced && !isEmpty(localContacts)) || (isResolvingCruxId);
 
     return (
       <ContainerWithHeader headerProps={{ centerItems: [{ title: `Send ${tokenName}` }] }} inset={{ bottom: 0 }}>
         <FormWrapper>
+          {!!cruxAccount.cruxID && !cruxAccount.valid &&
+          <HelpText style={{ color: baseColors.fireEngineRed }}>
+            {cruxAccount.resolveErrorMessage}
+          </HelpText>
+          }
           <Form
             ref={node => {
               this._form = node;
@@ -413,11 +433,6 @@ class SendTokenContacts extends React.Component<Props, State> {
             onBlur={this.handleChange}
             value={value}
           />
-          {!!cruxAccount.cruxID && !cruxAccount.valid &&
-          <HelpText style={{ color: baseColors.redDamask }}>
-            {cruxAccount.cruxID} is invalid Crux ID
-          </HelpText>
-          }
         </FormWrapper>
         {showSpinner && <Container center><Spinner /></Container>}
         {!!contactsToRender.length &&

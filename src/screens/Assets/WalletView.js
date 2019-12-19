@@ -116,6 +116,7 @@ type Props = {
   fetchAllCollectiblesData: Function,
   deploySmartWallet: Function,
   showDeploySmartWallet?: boolean,
+  cruxPay: Object,
 }
 
 type State = {

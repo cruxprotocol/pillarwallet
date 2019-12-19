@@ -1,12 +1,13 @@
 // @flow
 import map from 'lodash.map';
+import { baseColors } from 'utils/variables';
 
 // services
 import Storage from 'services/storage';
 import { CruxPay } from '@cruxpay/rn-sdk';
 
 const { CruxClientError } = CruxPay.errors;
-
+const { PENDING, DONE, REJECT } = CruxPay.blockstackService.SubdomainRegistrationStatus;
 
 const storage = Storage.getInstance('db');
 
@@ -35,7 +36,7 @@ class InMemStorage extends CruxPay.storage.StorageService {
   }
 }
 
-const getCruxWebViewInput = async (cruxPay, inputExtension) => {
+const getCruxWebViewInput = async (cruxPay: string, inputExtension: Object) => {
   const { getAssetMap, getAddressMap, walletClientName } = cruxPay.cruxClient;
   const assetMap = await getAssetMap();
   const assetDetailList = map(assetMap, (value, key) => {
@@ -60,13 +61,22 @@ const getCruxWebViewInput = async (cruxPay, inputExtension) => {
   return currentInputData;
 };
 
-const getCruxPaySubdomain = (input) => {
+const getCruxPaySubdomain = (input: string) => {
   return input.split('@')[0];
 };
 
 // TODO: ask js-sdk to export this
-const isValidCruxID = (input) => {
+const isValidCruxID = (input: string) => {
   return input.includes('crux') && input.includes('@') && getCruxPaySubdomain(input).length > 3;
+};
+
+const getCruxStatusIcon = (status: string) => {
+  const cruxStatusIcons = {
+    PENDING: { name: 'warning-circle', color: baseColors.vividOrange },
+    REJECT: { name: 'info-circle', color: baseColors.fireEngineRed },
+    DONE: { name: 'tick-circle', color: baseColors.limeGreen },
+  };
+  return cruxStatusIcons[status];
 };
 
 
@@ -76,5 +86,6 @@ export {
   getCruxWebViewInput,
   isValidCruxID,
   getCruxPaySubdomain,
+  getCruxStatusIcon,
   CruxClientError,
 };

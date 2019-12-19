@@ -37,11 +37,14 @@ import { getCruxWebViewInput, getCruxPaySubdomain } from 'services/cruxPay';
 import type { Assets } from 'models/Asset';
 
 // constants
-import { CRUXPAY_INTRO, HOME } from 'constants/navigationConstants';
+import { HOME } from 'constants/navigationConstants';
 
 // actions
 import { setBrowsingWebViewAction } from 'actions/appSettingsActions';
 import { loadCruxIDStateAction } from 'actions/cruxPayActions';
+
+// components
+import Toast from 'components/Toast';
 
 
 export const LoadingSpinner = styled(Spinner)`
@@ -55,7 +58,9 @@ type Props = {
   navigation: NavigationScreenProp<*>,
   assets: Assets,
   cruxPay: Object,
+  user: Object,
   setBrowsingWebView: Function,
+  loadCruxIDState: Function,
 }
 
 type State = {
@@ -68,6 +73,12 @@ class CruxPayRegistration extends React.PureComponent<Props, State> {
     loading: true,
     currentInputData: {},
   };
+  pageTitle: string;
+
+  constructor(props) {
+    super(props);
+    this.pageTitle = this.props.navigation.getParam('pageTitle', 'Setup CruxPay');
+  }
 
   onClosePress = () => {
     const { navigation } = this.props;
@@ -86,30 +97,30 @@ class CruxPayRegistration extends React.PureComponent<Props, State> {
     console.error('CruxPay handleError: ', error);
   }
 
-  onRegisterSuccess = async () => {
+  onRegisterSuccess = async (map: Object) => {
     // TODO: discuss what to do if a few failed?
     await this.props.loadCruxIDState();
     const { navigation, cruxPay } = this.props;
-    Alert.alert(
-      'Registration Success',
-      `Your cruxID: ${cruxPay.cruxID} is being updated. It takes about 3-4 hours to complete registration on blockchain.`,
-      [
-        { text: 'OK', onPress: () => navigation.navigate(HOME) },
-      ],
-    );
+    Toast.show({
+      title: 'Registration Success',
+      message: `Your CRUX ID: ${cruxPay.cruxID} is being updated. It takes about few hours to complete registration.`,
+      type: 'success',
+      autoClose: true,
+    });
+    navigation.navigate(HOME);
   };
 
-  onPutAddressSuccess = async () => {
+  onPutAddressSuccess = async (map: Object) => {
     // TODO: discuss what to do if a few failed?
     await this.props.loadCruxIDState();
     const { navigation, cruxPay } = this.props;
-    Alert.alert(
-      'Update CruxPay Addresses',
-      `Your cruxID: ${cruxPay.cruxID} is has been updated!`,
-      [
-        { text: 'OK', onPress: () => navigation.navigate(HOME) },
-      ],
-    );
+    Toast.show({
+      title: 'Update CruxPay Addresses',
+      message: `Your CRUX ID: ${cruxPay.cruxID} is has been updated!`,
+      type: 'success',
+      autoClose: true,
+    });
+    navigation.navigate(HOME);
   };
 
   componentDidMount = () => {
@@ -169,10 +180,10 @@ class CruxPayRegistration extends React.PureComponent<Props, State> {
       loading,
       currentInputData,
     } = this.state;
-    const cruxPayURL = 'https://s3-ap-southeast-1.amazonaws.com/files.coinswitch.co/openpay-setup/1.0.0/build/index.html';
+    const cruxPayURL = 'https://s3-ap-southeast-1.amazonaws.com/files.coinswitch.co/openpay-setup/1.0.1/build/index.html';
     const webviewCallsReact = `window.postMessage(${JSON.stringify(JSON.stringify(currentInputData))}, '*');`;
     return (
-      <ContainerWithHeader headerProps={{ centerItems: [{ title: 'Register CruxPay' }] }} >
+      <ContainerWithHeader headerProps={{ centerItems: [{ title: this.pageTitle }] }} >
         <Wrapper regularPadding style={{ justifyContent: 'space-between', flex: 1 }}>
           {loading && <LoadingSpinner />}
           {!loading &&

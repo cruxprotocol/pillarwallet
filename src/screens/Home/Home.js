@@ -29,7 +29,8 @@ import Intercom from 'react-native-intercom';
 // components
 import ActivityFeed from 'components/ActivityFeed';
 import styled from 'styled-components/native';
-import { BaseText, BoldText, MediumText, TextLink } from 'components/Typography';
+import { BoldText, MediumText, TextLink } from 'components/Typography';
+import Icon from 'components/Icon';
 import Tabs from 'components/Tabs';
 import QRCodeScanner from 'components/QRCodeScanner';
 import ContainerWithHeader from 'components/Layout/ContainerWithHeader';
@@ -76,16 +77,17 @@ import { accountHistorySelector } from 'selectors/history';
 import { accountCollectiblesHistorySelector } from 'selectors/collectibles';
 
 // utils
-import { baseColors, spacing, fontStyles, fontSizes, UIColors } from 'utils/variables';
+import { baseColors, spacing, fontStyles, fontSizes } from 'utils/variables';
 import { mapTransactionsHistory, mapOpenSeaAndBCXTransactionsHistory } from 'utils/feedData';
 import { filterSessionsByUrl } from 'screens/ManageDetailsSessions';
 
-// models, types
+// models, types, service
 import type { Account, Accounts } from 'models/Account';
 import type { Badges, BadgeRewardEvent } from 'models/Badge';
 import type { ContactSmartAddressData } from 'models/Contacts';
 import type { Connector } from 'models/WalletConnect';
 import type { UserEvent } from 'models/userEvent';
+import { getCruxStatusIcon } from 'services/cruxPay';
 
 type Props = {
   navigation: NavigationScreenProp<*>,
@@ -119,6 +121,7 @@ type Props = {
   userEvents: UserEvent[],
   fetchBadgeAwardHistory: () => void,
   badgesEvents: BadgeRewardEvent[],
+  cruxPay: Object,
 };
 
 type State = {
@@ -139,13 +142,15 @@ const BalanceWrapper = styled.View`
 `;
 
 const CruxIDStateWrapper = styled.View`
-  padding: ${spacing.medium}px ${spacing.large}px;
+  padding: ${spacing.medium}px ${spacing.large}px ${spacing.large}px ${spacing.large}px;
   width: 100%;
   border-bottom-width: 1px;
   border-color: ${baseColors.mediumLightGray};
 `;
 
 const CopyCruxIDLink = styled.TouchableOpacity`
+  flex: 1;
+  flex-direction: row;
   margin-top: ${spacing.small}px;
   margin-bottom: ${spacing.small}px;
   align-items: flex-start;
@@ -318,7 +323,7 @@ class HomeScreen extends React.Component<Props, State> {
       cruxPay,
     } = this.props;
     Clipboard.setString(cruxPay.cruxID);
-    Toast.show({ message: 'CruxID copied to clipboard', type: 'success', title: 'Success' });
+    Toast.show({ message: 'CRUX ID copied to clipboard', type: 'success', title: 'Success' });
   };
 
   render() {
@@ -424,6 +429,7 @@ class HomeScreen extends React.Component<Props, State> {
     const badgesContainerStyle = !badges.length ? { width: '100%', justifyContent: 'center' } : {};
     // CRUXPAY
     const isCruxIdPresent = !!cruxPay.cruxID;
+    const cruxStatusIcon = getCruxStatusIcon(cruxPay.status.status);
 
     return (
       <ContainerWithHeader
@@ -470,20 +476,24 @@ class HomeScreen extends React.Component<Props, State> {
           </BalanceWrapper>
           {isCruxIdPresent &&
             <CruxIDStateWrapper>
-              <View>
-                <BoldText>Your cruxID: </BoldText>
-                <CopyCruxIDLink onPress={this.handleCopyCruxIDToClipboard}>
-                  <TextLink>{cruxPay.cruxID}</TextLink>
-                </CopyCruxIDLink>
-                <BaseText style={{
-                  color: UIColors.defaultTextColor,
-                  fontSize: fontSizes.regular,
-                }}
-                >
-                  <BoldText>Status: </BoldText>
-                  {cruxPay.status.status}
-                </BaseText>
-              </View>
+              <BoldText>Your CRUX ID: </BoldText>
+              <CopyCruxIDLink onPress={this.handleCopyCruxIDToClipboard}>
+                <Icon
+                  name={cruxStatusIcon.name}
+                  style={{
+                    color: cruxStatusIcon.color,
+                    fontSize: fontSizes.medium,
+                  }}
+                />
+                <TextLink>&nbsp;{cruxPay.cruxID}</TextLink>
+                <Icon
+                  name="received"
+                  style={{
+                    fontSize: fontSizes.large,
+                    marginLeft: 'auto',
+                  }}
+                />
+              </CopyCruxIDLink>
             </CruxIDStateWrapper>
           }
           <WalletConnectWrapper>

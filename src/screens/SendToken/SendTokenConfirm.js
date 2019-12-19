@@ -142,7 +142,7 @@ class SendTokenConfirm extends React.Component<Props, State> {
           }
           {!!this.cruxID &&
           <LabeledRow>
-            <Label>Recipient Crux ID</Label>
+            <Label>Recipient CRUX ID</Label>
             <Value>{this.cruxID}</Value>
           </LabeledRow>
           }
