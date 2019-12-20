@@ -36,7 +36,7 @@ class InMemStorage extends CruxPay.storage.StorageService {
   }
 }
 
-const getCruxWebViewInput = async (cruxPay: string, inputExtension: Object) => {
+const getCruxWebViewInput = async (cruxPay: Object, inputExtension: Object) => {
   const { getAssetMap, getAddressMap, walletClientName } = cruxPay.cruxClient;
   const assetMap = await getAssetMap();
   const assetDetailList = map(assetMap, (value, key) => {
@@ -52,8 +52,7 @@ const getCruxWebViewInput = async (cruxPay: string, inputExtension: Object) => {
     publicAddressCurrencies: cruxPayPublicAddressCurrencies,
     assetList: assetDetailList,
     theme: '#3742fa',
-    subdomainRegistrar: 'https://registrar.cruxpay.com',
-    subdomainRegistrar1: cruxPay.cruxClient._nameService._subdomainRegistrar,
+    subdomainRegistrar: cruxPay.cruxClient._nameService._subdomainRegistrar,
     walletClientName,
     clientMapping,
   };
