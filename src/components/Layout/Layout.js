@@ -22,8 +22,10 @@ import styled from 'styled-components/native';
 import { SafeAreaView } from 'react-navigation';
 import { Platform, StatusBar, StyleSheet } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { UIColors, spacing } from 'utils/variables';
+import { spacing } from 'utils/variables';
 import { isIphoneX } from 'utils/common';
+import { themedColors } from 'utils/themes';
+import type { Theme } from 'models/Theme';
 
 type ContainerProps = {
   children?: React.Node,
@@ -33,6 +35,8 @@ type ContainerProps = {
   inset?: Object,
   onLayout?: Function,
   innerStyle?: Object,
+  defaultTheme?: Theme,
+  theme?: Theme, // TODO: remove '?' after cleanup (Screens that are not used are not wrapped with ThemeProvider)
 };
 
 type FooterProps = {
@@ -66,7 +70,7 @@ export const Center = styled.View`
 `;
 
 export const ContainerOuter = styled(SafeAreaView)`
-  background-color: ${props => (props.color ? props.color : UIColors.defaultBackgroundColor)};
+  background-color: ${props => (props.color ? props.color : themedColors.surface)};
   ${props => props.androidStatusbarHeight ? `padding-top: ${props.androidStatusbarHeight}px` : ''};
 `;
 
@@ -85,6 +89,8 @@ export const Container = (props: ContainerProps) => {
     center,
     onLayout,
     children,
+    defaultTheme,
+    theme,
   } = props;
 
   return (
@@ -93,6 +99,7 @@ export const Container = (props: ContainerProps) => {
       style={style}
       forceInset={{ top: 'always', ...inset }}
       androidStatusbarHeight={StatusBar.currentHeight}
+      theme={theme || defaultTheme}
     >
       <ContainerInner
         center={center}
@@ -106,7 +113,7 @@ export const Container = (props: ContainerProps) => {
 };
 
 export const Wrapper = styled.View`
-  margin: ${props => (props.regularPadding ? `0 ${spacing.large}px` : '0')};
+  margin: ${props => (props.regularPadding ? `0 ${spacing.layoutSides}px` : '0')};
   ${({ center }) => center && 'align-items: center; justify-content: center;'}
   ${({ fullScreen }) => fullScreen && 'height: 100%; width: 100%;'}
   ${({ flex }) => flex && `flex: ${flex};`}
@@ -117,7 +124,7 @@ export const Wrapper = styled.View`
 const FooterInner = styled.KeyboardAvoidingView`
   width: 100%;
   margin-top: auto;
-  padding: ${Platform.OS === 'ios' ? 0 : `${spacing.rhythm}px`};
+  padding: ${Platform.OS === 'ios' ? 0 : `${spacing.layoutSides}px`};
   flex-direction: ${props => (props.column ? 'row' : 'column')};
   background-color: ${props => props.backgroundColor ? props.backgroundColor : 'transparent'};
 `;
@@ -181,7 +188,7 @@ export const Footer = (props: FooterProps) => {
         position: 'relative',
         flexDirection: 'column',
         justifyContent: 'flex-end',
-        padding: spacing.rhythm,
+        padding: spacing.layoutSides,
         ...props.style,
       }}
       backgroundColor={props.backgroundColor}

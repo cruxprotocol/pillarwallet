@@ -33,6 +33,7 @@ import ContainerWithHeader from 'components/Layout/ContainerWithHeader';
 import { Wrapper } from 'components/Layout';
 import Button from 'components/Button';
 import { TextLink, Label, BaseText } from 'components/Typography';
+import Spinner from 'components/Spinner';
 
 // configs
 import { PPN_TOKEN } from 'configs/assetsConfig';
@@ -175,8 +176,8 @@ class FundTank extends React.Component<Props, State> {
       navigation,
     } = this.props;
 
-    const { symbol: token, iconMonoUrl, decimals } = assets[PPN_TOKEN] || {};
-    const icon = iconMonoUrl ? `${SDK_PROVIDER}/${iconMonoUrl}?size=2` : '';
+    const { symbol: token, iconUrl, decimals } = assets[PPN_TOKEN] || {};
+    const icon = iconUrl ? `${SDK_PROVIDER}/${iconUrl}?size=2` : '';
     const fiatCurrency = baseFiatCurrency || defaultFiatCurrency;
     const isInitFlow = navigation.getParam('isInitFlow', false);
 
@@ -191,7 +192,7 @@ class FundTank extends React.Component<Props, State> {
     // fee
     const txFeeInWei = this.getTxFeeInWei();
     const isEnoughForFee = checkIfEnoughForFee(balances, txFeeInWei);
-    const feeInEth = formatAmount(utils.formatEther(this.getTxFeeInWei()));
+    const feeInEth = formatAmount(utils.formatEther(this.getTxFeeInWei().toString()));
 
     // max amount
     const maxAmount = calculateMaxAmount(token, balance, txFeeInWei);
@@ -205,7 +206,12 @@ class FundTank extends React.Component<Props, State> {
 
     // form
     const formStructure = makeAmountForm(maxAmount, MIN_TX_AMOUNT, isEnoughForFee, this.formSubmitted, decimals);
-    const formFields = getAmountFormFields({ icon, currency: token, valueInFiatOutput });
+    const formFields = getAmountFormFields({
+      icon,
+      currency: token,
+      valueInFiatOutput,
+      customProps: { inputWrapperStyle: { marginTop: spacing.large } },
+    });
 
     return (
       <ContainerWithHeader
@@ -213,7 +219,8 @@ class FundTank extends React.Component<Props, State> {
         backgroundColor={baseColors.white}
         keyboardAvoidFooter={(
           <FooterInner>
-            <Label>Estimated fee {feeInEth} ETH</Label>
+            {!topUpFee.isFetched && <Spinner width={20} height={20} />}
+            {topUpFee.isFetched && <Label>Estimated fee {feeInEth} ETH</Label>}
             {!!value && !!parseFloat(value.amount) &&
             <Button
               disabled={!session.isOnline || !topUpFee.isFetched}

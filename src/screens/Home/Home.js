@@ -28,7 +28,7 @@ import Intercom from 'react-native-intercom';
 
 // components
 import ActivityFeed from 'components/ActivityFeed';
-import styled from 'styled-components/native';
+import styled, { withTheme } from 'styled-components/native';
 import { BoldText, MediumText, TextLink } from 'components/Typography';
 import Icon from 'components/Icon';
 import Tabs from 'components/Tabs';
@@ -41,6 +41,7 @@ import EmptyStateParagraph from 'components/EmptyState/EmptyStateParagraph';
 import Toast from 'components/Toast';
 
 // constants
+import { defaultFiatCurrency } from 'constants/assetsConstants';
 import {
   MANAGE_DETAILS_SESSIONS,
   BADGE,
@@ -78,6 +79,7 @@ import { accountCollectiblesHistorySelector } from 'selectors/collectibles';
 
 // utils
 import { baseColors, spacing, fontStyles, fontSizes } from 'utils/variables';
+import { getThemeColors, themedColors } from 'utils/themes';
 import { mapTransactionsHistory, mapOpenSeaAndBCXTransactionsHistory } from 'utils/feedData';
 import { filterSessionsByUrl } from 'screens/ManageDetailsSessions';
 
@@ -87,6 +89,8 @@ import type { Badges, BadgeRewardEvent } from 'models/Badge';
 import type { ContactSmartAddressData } from 'models/Contacts';
 import type { Connector } from 'models/WalletConnect';
 import type { UserEvent } from 'models/userEvent';
+import type { Theme } from 'models/Theme';
+import type { RootReducerState, Dispatch } from 'reducers/rootReducer';
 import { getCruxStatusIcon } from 'services/cruxPay';
 
 type Props = {
@@ -112,7 +116,7 @@ type Props = {
   badges: Badges,
   fetchBadges: Function,
   connectors: Connector[],
-  pendingConnector?: Connector,
+  pendingConnector: ?Connector,
   logScreenView: (view: string, screen: string) => void,
   activeAccount: ?Account,
   contactsSmartAddresses: ContactSmartAddressData[],
@@ -121,6 +125,8 @@ type Props = {
   userEvents: UserEvent[],
   fetchBadgeAwardHistory: () => void,
   badgesEvents: BadgeRewardEvent[],
+  theme: Theme,
+  baseFiatCurrency: ?string,
   cruxPay: Object,
 };
 
@@ -158,12 +164,12 @@ const CopyCruxIDLink = styled.TouchableOpacity`
 
 const WalletConnectWrapper = styled.View`
   padding: ${spacing.medium}px ${spacing.large}px 0;
-  background-color: ${baseColors.snowWhite};
+  background-color: ${themedColors.surface};
   width: 100%;
 `;
 
 const ListHeader = styled(MediumText)`
-  color: ${baseColors.blueYonder};
+  color: ${themedColors.accent};
   ${fontStyles.regular};
   margin: ${spacing.medium}px ${spacing.large}px ${spacing.small}px;
 `;
@@ -172,7 +178,7 @@ const BadgesWrapper = styled.View`
   padding: ${spacing.medium}px 0;
   border-top-width: 1px;
   border-bottom-width: 1px;
-  border-color: ${baseColors.mediumLightGray};
+  border-color: ${themedColors.border};
 `;
 
 const EmptyStateWrapper = styled.View`
@@ -344,8 +350,11 @@ class HomeScreen extends React.Component<Props, State> {
       accounts,
       userEvents,
       badgesEvents,
+      theme,
+      baseFiatCurrency,
       cruxPay,
     } = this.props;
+    const colors = getThemeColors(theme);
 
     const {
       activeTab,
@@ -427,24 +436,25 @@ class HomeScreen extends React.Component<Props, State> {
     const sessionsLabel = sessionsCount ? `${sessionsCount} ${sessionsLabelPart}` : '';
 
     const badgesContainerStyle = !badges.length ? { width: '100%', justifyContent: 'center' } : {};
+    const fiatCurrency = baseFiatCurrency || defaultFiatCurrency;
     // CRUXPAY
     const isCruxIdPresent = !!cruxPay.cruxID;
     const cruxStatusIcon = getCruxStatusIcon(cruxPay.status.status);
 
     return (
       <ContainerWithHeader
-        backgroundColor={baseColors.white}
+        backgroundColor={colors.card}
         headerProps={{
           leftItems: [{ user: true }],
           rightItems: [
             {
-              label: 'Settings',
+              link: 'Settings',
               onPress: () => { navigation.navigate(SETTINGS); },
             },
             {
-              label: 'Support',
+              link: 'Support',
               onPress: () => Intercom.displayMessenger(),
-              bordered: true,
+              withBackground: true,
               addon: hasIntercomNotifications && (
                 <View
                   style={{
@@ -471,9 +481,7 @@ class HomeScreen extends React.Component<Props, State> {
               onRefresh={this.refreshScreenData}
             />}
         >
-          <BalanceWrapper>
-            <PortfolioBalance />
-          </BalanceWrapper>
+          <PortfolioBalance fiatCurrency={fiatCurrency} />
           {isCruxIdPresent &&
             <CruxIDStateWrapper>
               <BoldText>Your CRUX ID: </BoldText>
@@ -534,7 +542,6 @@ class HomeScreen extends React.Component<Props, State> {
             onTabChange={this.onTabChange}
           />
           <ActivityFeed
-            backgroundColor={baseColors.white}
             onCancelInvitation={cancelInvitation}
             onRejectInvitation={rejectInvitation}
             onAcceptInvitation={acceptInvitation}
@@ -569,7 +576,8 @@ const mapStateToProps = ({
   session: { data: { isOnline } },
   userEvents: { data: userEvents },
   cruxPay,
-}) => ({
+  appSettings: { data: { baseFiatCurrency } },
+}: RootReducerState): $Shape<Props> => ({
   contacts,
   user,
   invitations,
@@ -583,6 +591,7 @@ const mapStateToProps = ({
   isOnline,
   userEvents,
   cruxPay,
+  baseFiatCurrency,
 });
 
 const structuredSelector = createStructuredSelector({
@@ -590,12 +599,12 @@ const structuredSelector = createStructuredSelector({
   openSeaTxHistory: accountCollectiblesHistorySelector,
 });
 
-const combinedMapStateToProps = (state) => ({
+const combinedMapStateToProps = (state: RootReducerState): $Shape<Props> => ({
   ...structuredSelector(state),
   ...mapStateToProps(state),
 });
 
-const mapDispatchToProps = (dispatch) => ({
+const mapDispatchToProps = (dispatch: Dispatch): $Shape<Props> => ({
   cancelInvitation: (invitation) => dispatch(cancelInvitationAction(invitation)),
   acceptInvitation: (invitation) => dispatch(acceptInvitationAction(invitation)),
   rejectInvitation: (invitation) => dispatch(rejectInvitationAction(invitation)),
@@ -612,4 +621,4 @@ const mapDispatchToProps = (dispatch) => ({
   fetchBadgeAwardHistory: () => dispatch(fetchBadgeAwardHistoryAction()),
 });
 
-export default connect(combinedMapStateToProps, mapDispatchToProps)(HomeScreen);
+export default withTheme(connect(combinedMapStateToProps, mapDispatchToProps)(HomeScreen));

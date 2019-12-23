@@ -19,71 +19,81 @@
 */
 import * as React from 'react';
 import { connect } from 'react-redux';
-import { View } from 'react-native';
 import { createStructuredSelector } from 'reselect';
+
+import type { BitcoinBalance } from 'models/Bitcoin';
+import type { RootReducerState } from 'reducers/rootReducer';
 import type {
   Balances,
   Rates,
 } from 'models/Asset';
-import { BaseText } from 'components/Typography';
+
+import { BLOCKCHAIN_NETWORK_TYPES } from 'constants/blockchainNetworkConstants';
+
+import BalanceView from 'components/PortfolioBalance/BalanceView';
 import { calculateBalanceInFiat } from 'utils/assets';
-import { formatFiat } from 'utils/common';
-import { UIColors, baseColors, fontSizes } from 'utils/variables';
-import { defaultFiatCurrency } from 'constants/assetsConstants';
+import { calculateBitcoinBalanceInFiat } from 'utils/bitcoin';
 import { accountBalancesSelector } from 'selectors/balances';
 import { accountAssetsSelector } from 'selectors/assets';
 
 type Props = {
   rates: Rates,
   balances: Balances,
-  baseFiatCurrency: string,
+  bitcoinBalances: BitcoinBalance,
+  fiatCurrency: string,
   label?: string,
   style: Object,
+  blockchainNetwork: ?string,
+};
+
+const networkBalance = (props: Props): number => {
+  const {
+    balances,
+    fiatCurrency,
+    rates,
+    blockchainNetwork,
+    bitcoinBalances,
+  } = props;
+
+  switch (blockchainNetwork) {
+    case BLOCKCHAIN_NETWORK_TYPES.BITCOIN:
+      return calculateBitcoinBalanceInFiat(rates, bitcoinBalances, fiatCurrency);
+
+    case BLOCKCHAIN_NETWORK_TYPES.PILLAR_NETWORK:
+    default:
+      return calculateBalanceInFiat(rates, balances, fiatCurrency);
+  }
 };
 
 class PortfolioBalance extends React.PureComponent<Props> {
   render() {
     const {
       style,
-      rates,
-      balances,
-      baseFiatCurrency,
       label,
+      fiatCurrency,
     } = this.props;
 
-    const fiatCurrency = baseFiatCurrency || defaultFiatCurrency;
-    const balance = calculateBalanceInFiat(rates, balances, fiatCurrency);
-    const portfolioBalance = formatFiat(balance, baseFiatCurrency);
+    const balance = networkBalance(this.props);
 
     return (
-      <View style={style}>
-        {!!label &&
-        <BaseText style={{
-          color: baseColors.darkGray,
-          fontSize: fontSizes.medium,
-          paddingTop: 10,
-        }}
-        >
-          {label}
-        </BaseText>}
-        <BaseText style={{
-          color: UIColors.defaultTextColor,
-          fontSize: fontSizes.giant,
-        }}
-        >
-          {portfolioBalance}
-        </BaseText>
-      </View>
+      <BalanceView
+        style={style}
+        label={label}
+        fiatCurrency={fiatCurrency}
+        balance={balance}
+      />
     );
   }
 }
 
 const mapStateToProps = ({
   rates: { data: rates },
-  appSettings: { data: { baseFiatCurrency } },
-}) => ({
+  bitcoin: { data: { balances: bitcoinBalances } },
+  appSettings: { data: { blockchainNetwork } },
+}: RootReducerState): $Shape<Props> => ({
   rates,
-  baseFiatCurrency,
+  bitcoinBalances,
+  blockchainNetwork,
 });
 
 const structuredSelector = createStructuredSelector({
@@ -91,7 +101,7 @@ const structuredSelector = createStructuredSelector({
   assets: accountAssetsSelector,
 });
 
-const combinedMapStateToProps = (state) => ({
+const combinedMapStateToProps = (state: RootReducerState): $Shape<Props> => ({
   ...structuredSelector(state),
   ...mapStateToProps(state),
 });

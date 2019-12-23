@@ -17,7 +17,7 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-import { UPDATE_APP_SETTINGS, RESET_APP_SETTINGS } from 'constants/appSettingsConstants';
+import { UPDATE_APP_SETTINGS, RESET_APP_SETTINGS, LIGHT_THEME } from 'constants/appSettingsConstants';
 import { SIMPLIFIED } from 'constants/assetsLayoutConstants';
 import merge from 'lodash.merge';
 
@@ -29,8 +29,10 @@ export type AppSettingsReducerState = {
     },
     blockchainNetwork: ?string,
     userJoinedBeta: ?boolean,
-    firebaseAnalyticsConnectionEnabled: ?boolean,
     baseFiatCurrency: ?string,
+    transactionSpeed: ?string,
+    themeType: string,
+    useBiometrics?: boolean,
   },
   isFetched: boolean,
 };
@@ -48,8 +50,9 @@ export const initialState: AppSettingsReducerState = {
     },
     blockchainNetwork: null,
     userJoinedBeta: false,
-    firebaseAnalyticsConnectionEnabled: false,
     baseFiatCurrency: null,
+    transactionSpeed: null,
+    themeType: LIGHT_THEME,
   },
   isFetched: false,
 };

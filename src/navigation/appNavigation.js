@@ -50,6 +50,9 @@ import SendTokenAssetsScreen from 'screens/SendToken/SendTokenAssets';
 import SendTokenPinConfirmScreen from 'screens/SendToken/SendTokenPinConfirmScreen';
 import SendTokenConfirmScreen from 'screens/SendToken/SendTokenConfirm';
 import SendTokenTransactionScreen from 'screens/SendToken/SendTokenTransaction';
+import SendBitcoinPinConfirmScreen from 'screens/SendBitcoin/SendBitcoinPinConfirmScreen';
+import SendBitcoinConfirmScreen from 'screens/SendBitcoin/SendBitcoinConfirm';
+import SendBitcoinTransactionScreen from 'screens/SendBitcoin/SendBitcoinTransaction';
 import SendCollectibleConfirmScreen from 'screens/SendCollectible/SendCollectibleConfirm';
 import PPNSendTokenAmountScreen from 'screens/Tank/SendToken/PPNSendTokenAmount';
 import HomeScreen from 'screens/Home';
@@ -84,7 +87,6 @@ import TankWithdrawalConfirmScreen from 'screens/Tank/TankWithdrawalConfirm';
 import ManageDetailsSessionsScreen from 'screens/ManageDetailsSessions';
 import AccountsScreen from 'screens/Accounts';
 import PillarNetworkIntro from 'screens/PillarNetwork/PillarNetworkIntro';
-import BitcoinNetworkIntro from 'screens/BitcoinNetwork/BitcoinNetworkIntro';
 import UserSettingsScreen from 'screens/Users/UserSettings';
 import AddOrEditUserScreen from 'screens/Users/AddOrEditUser';
 import SettingsScreen from 'screens/Settings';
@@ -94,7 +96,12 @@ import FiatCryptoScreen from 'screens/FiatExchange/FiatCrypto';
 import CruxPayIntroScreen from 'screens/CruxPay/CruxPayIntro';
 import CruxPayRegistrationScreen from 'screens/CruxPay/CruxPayRegistration';
 import SmartWalletIntroScreen from 'screens/UpgradeToSmartWallet/SmartWalletIntro';
-import UnsettledAssets from 'screens/UnsettledAssets';
+import UnsettledAssetsScreen from 'screens/UnsettledAssets';
+import SendSyntheticAssetScreen from 'screens/SendSynthetic/SendSyntheticAsset';
+import SendSyntheticConfirmScreen from 'screens/SendSynthetic/SendSyntheticConfirm';
+import SendSyntheticAmountScreen from 'screens/SendSynthetic/SendSyntheticAmount';
+import SendSyntheticUnavailableScreen from 'screens/SendSynthetic/SendSyntheticUnavailable';
+import LogoutPendingScreen from 'screens/LogoutPending';
 
 // components
 import RetryApiRegistration from 'components/RetryApiRegistration';
@@ -122,6 +129,7 @@ import { updateSignalInitiatedStateAction } from 'actions/sessionActions';
 import { fetchAllCollectiblesDataAction } from 'actions/collectiblesActions';
 import { removePrivateKeyFromMemoryAction } from 'actions/walletActions';
 import { signalInitAction } from 'actions/signalClientActions';
+import { endWalkthroughAction } from 'actions/walkthroughsActions';
 
 // constants
 import {
@@ -144,6 +152,10 @@ import {
   CHANGE_PIN_NEW_PIN,
   CHANGE_PIN_CONFIRM_NEW_PIN,
   TAB_NAVIGATION,
+  SEND_BITCOIN_FLOW,
+  SEND_BITCOIN_CONFIRM,
+  SEND_BITCOIN_TRANSACTION,
+  SEND_BITCOIN_PIN_CONFIRM,
   SEND_TOKEN_AMOUNT,
   SEND_TOKEN_CONTACTS,
   SEND_TOKEN_ASSETS,
@@ -191,7 +203,6 @@ import {
   CONTACT_INFO,
   ACCOUNTS,
   PILLAR_NETWORK_INTRO,
-  BITCOIN_NETWORK_INTRO,
   MANAGE_USERS_FLOW,
   USER_SETTINGS,
   ADD_EDIT_USER,
@@ -202,10 +213,17 @@ import {
   SMART_WALLET_INTRO,
   PPN_SEND_TOKEN_AMOUNT,
   PPN_SEND_TOKEN_FROM_ASSET_FLOW,
+  PPN_SEND_SYNTHETIC_ASSET_FLOW,
   UNSETTLED_ASSETS,
   TANK_WITHDRAWAL_FLOW,
   TANK_WITHDRAWAL,
   TANK_WITHDRAWAL_CONFIRM,
+  SEND_SYNTHETIC_ASSET,
+  SEND_SYNTHETIC_CONFIRM,
+  SEND_SYNTHETIC_AMOUNT,
+  SEND_SYNTHETIC_UNAVAILABLE,
+  LOGOUT_PENDING,
+  UNSETTLED_ASSETS_FLOW,
   CRUXPAY_INTRO,
   CRUXPAY_REGISTRATION,
 } from 'constants/navigationConstants';
@@ -270,7 +288,6 @@ const assetsFlow = createStackNavigator(
     [COLLECTIBLE]: CollectibleScreen,
     [CONTACT]: ContactScreen,
     [SETTINGS]: SettingsScreen,
-    [UNSETTLED_ASSETS]: UnsettledAssets,
   },
   StackNavigatorConfig,
 );
@@ -448,6 +465,18 @@ const sendTokenFromAssetFlow = createStackNavigator(
   StackNavigatorModalConfig,
 );
 
+// SEND BITCOIN FROM ASSET FLOW
+const sendBitcoinFromAssetFlow = createStackNavigator(
+  {
+    [SEND_TOKEN_CONTACTS]: SendTokenContactsScreen,
+    [SEND_TOKEN_AMOUNT]: SendTokenAmountScreen,
+    [SEND_BITCOIN_CONFIRM]: SendBitcoinConfirmScreen,
+    [SEND_BITCOIN_PIN_CONFIRM]: SendBitcoinPinConfirmScreen,
+    [SEND_BITCOIN_TRANSACTION]: SendBitcoinTransactionScreen,
+  },
+  StackNavigatorModalConfig,
+);
+
 // SEND ASSETS FROM CONTACT FLOW
 const sendTokenFromContactFlow = createStackNavigator({
   [SEND_TOKEN_ASSETS]: SendTokenAssetsScreen,
@@ -514,6 +543,26 @@ const ppnSendTokenFromAssetFlow = createStackNavigator(
   StackNavigatorModalConfig,
 );
 
+// PPN SEND SYNTHETIC ASSET FULL FLOW
+const ppnSendSyntheticAssetFlow = createStackNavigator(
+  {
+    [SEND_SYNTHETIC_ASSET]: SendSyntheticAssetScreen,
+    [SEND_TOKEN_CONTACTS]: SendTokenContactsScreen,
+    // synthetic
+    [SEND_SYNTHETIC_AMOUNT]: SendSyntheticAmountScreen,
+    [SEND_SYNTHETIC_CONFIRM]: SendSyntheticConfirmScreen,
+    [SEND_TOKEN_PIN_CONFIRM]: SendTokenPinConfirmScreen,
+    [SEND_TOKEN_TRANSACTION]: SendTokenTransactionScreen,
+    [SEND_SYNTHETIC_UNAVAILABLE]: SendSyntheticUnavailableScreen,
+    // other
+    [SEND_TOKEN_AMOUNT]: SendTokenAmountScreen,
+    [SEND_TOKEN_CONFIRM]: SendTokenConfirmScreen,
+    [SEND_TOKEN_PIN_CONFIRM]: SendTokenPinConfirmScreen,
+    [SEND_TOKEN_TRANSACTION]: SendTokenTransactionScreen,
+  },
+  StackNavigatorModalConfig,
+);
+
 // MANAGE WALLETS FLOW
 const manageWalletsFlow = createStackNavigator({
   [ACCOUNTS]: AccountsScreen,
@@ -540,6 +589,15 @@ const tankSettleFlow = createStackNavigator({
 
 tankSettleFlow.navigationOptions = hideTabNavigatorOnChildView;
 
+// UNSETTLED ASSETS FLOW
+const unsettledAssetsFlow = createStackNavigator({
+  [UNSETTLED_ASSETS]: UnsettledAssetsScreen,
+  [SETTLE_BALANCE]: SettleBalanceScreen,
+  [SETTLE_BALANCE_CONFIRM]: SettleBalanceConfirmScreen,
+}, StackNavigatorConfig);
+
+unsettledAssetsFlow.navigationOptions = hideTabNavigatorOnChildView;
+
 const tankFundFlow = createStackNavigator({
   [FUND_TANK]: FundTankScreen,
   [FUND_CONFIRM]: FundConfirmScreen,
@@ -559,7 +617,9 @@ const AppFlowNavigation = createStackNavigator(
   {
     [TAB_NAVIGATION]: tabNavigation,
     [SEND_TOKEN_FROM_ASSET_FLOW]: sendTokenFromAssetFlow,
+    [SEND_BITCOIN_FLOW]: sendBitcoinFromAssetFlow,
     [PPN_SEND_TOKEN_FROM_ASSET_FLOW]: ppnSendTokenFromAssetFlow,
+    [PPN_SEND_SYNTHETIC_ASSET_FLOW]: ppnSendSyntheticAssetFlow,
     [SEND_TOKEN_FROM_CONTACT_FLOW]: sendTokenFromContactFlow,
     [SEND_COLLECTIBLE_FROM_ASSET_FLOW]: sendCollectibleFromAssetFlow,
     [PARTICIPATE_IN_ICO_FLOW]: participateInICOFlow,
@@ -569,6 +629,7 @@ const AppFlowNavigation = createStackNavigator(
     [UPGRADE_TO_SMART_WALLET_FLOW]: smartWalletUpgradeFlow,
     [MANAGE_WALLETS_FLOW]: manageWalletsFlow,
     [TANK_SETTLE_FLOW]: tankSettleFlow,
+    [UNSETTLED_ASSETS_FLOW]: unsettledAssetsFlow,
     [TANK_FUND_FLOW]: tankFundFlow,
     [TANK_WITHDRAWAL_FLOW]: tankWithdrawalFlow,
     [WALLETCONNECT_FLOW]: walletConnectFlow,
@@ -578,7 +639,7 @@ const AppFlowNavigation = createStackNavigator(
     [SMART_WALLET_INTRO]: SmartWalletIntroScreen,
     [CRUXPAY_INTRO]: CruxPayIntroScreen,
     [CRUXPAY_REGISTRATION]: CruxPayRegistrationScreen,
-    [BITCOIN_NETWORK_INTRO]: BitcoinNetworkIntro,
+    [LOGOUT_PENDING]: LogoutPendingScreen,
   },
   modalTransition,
 );
@@ -615,6 +676,7 @@ type Props = {
   stopListeningForBalanceChange: Function,
   isOnline: boolean,
   initSignal: Function,
+  endWalkthrough: () => void,
 }
 
 type State = {
@@ -681,7 +743,7 @@ class AppFlow extends React.Component<Props, State> {
       }
     }
 
-    if (notifications.length !== prevNotifications.length) {
+    if (notifications.length && notifications.length !== prevNotifications.length) {
       const lastNotification = notifications[notifications.length - 1];
 
       if (lastNotification.type === 'CONNECTION' && connectionMessagesToExclude.includes(lastNotification.status)) {
@@ -724,6 +786,7 @@ class AppFlow extends React.Component<Props, State> {
       isPickingImage,
       isBrowsingWebView,
       stopListeningForBalanceChange,
+      endWalkthrough,
     } = this.props;
     const { lastAppState } = this.state;
     BackgroundTimer.clearTimeout(lockTimer);
@@ -732,6 +795,8 @@ class AppFlow extends React.Component<Props, State> {
     if (APP_LOGOUT_STATES.includes(nextAppState)) {
       // close websocket channel instantly to receive PN while in background
       stopListeningChatWebSocket();
+      // close walkthrough shade or tooltips
+      endWalkthrough();
       lockTimer = BackgroundTimer.setTimeout(() => {
         const pathAndParams = navigation.router.getPathAndParamsForState(navigation.state);
         const lastActiveScreen = pathAndParams.path.split('/').slice(-1)[0];
@@ -838,6 +903,7 @@ const mapDispatchToProps = dispatch => ({
   startListeningForBalanceChange: () => dispatch(startListeningForBalanceChangeAction()),
   stopListeningForBalanceChange: () => dispatch(stopListeningForBalanceChangeAction()),
   initSignal: () => dispatch(signalInitAction()),
+  endWalkthrough: () => dispatch(endWalkthroughAction()),
 });
 
 const ConnectedAppFlow = connect(

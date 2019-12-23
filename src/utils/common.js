@@ -48,6 +48,9 @@ import {
 import { MANAGE_USERS_FLOW } from 'constants/navigationConstants';
 
 const WWW_URL_PATTERN = /^www\./i;
+const supportedAddressPrefixes = new RegExp(
+  `^(?:${ETHEREUM_ADDRESS_PREFIX}|${BITCOIN_ADDRESS_PREFIX}):`, 'gi',
+);
 
 export const delay = async (ms: number) => {
   return new Promise(resolve => {
@@ -92,6 +95,10 @@ export const decodeBTCAddress = (encodedAddress: string): string => {
 
 export const decodeETHAddress = (encodedAddress: string): string => {
   return decodeAddress(ETHEREUM_ADDRESS_PREFIX, encodedAddress);
+};
+
+export const decodeSupportedAddress = (encodedAddress: string): string => {
+  return encodedAddress.replace(supportedAddressPrefixes, '');
 };
 
 export const pipe = (...fns: Function[]) => {
@@ -457,6 +464,12 @@ export const isCaseInsensitiveMatch = (a: ?string, b: ?string): boolean => {
   if (!a || !b) return false;
   return a.toLowerCase() === b.toLowerCase();
 };
+
+// number with decimals is valid if it has decimals else if not then it should not contain any decimal pointer
+export const isValidNumberDecimals = (
+  number: number | string,
+  decimals: number,
+) => decimals !== 0 || !number.toString().includes('.');
 
 /**
  * helps to avoid text overlapping on many decimals,

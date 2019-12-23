@@ -21,6 +21,11 @@ import AsyncStorage from '@react-native-community/async-storage';
 import { NavigationActions } from 'react-navigation';
 import merge from 'lodash.merge';
 import get from 'lodash.get';
+import isEmpty from 'lodash.isempty';
+import firebase from 'react-native-firebase';
+import Intercom from 'react-native-intercom';
+
+// constants
 import {
   DECRYPT_WALLET,
   UPDATE_WALLET_STATE,
@@ -39,13 +44,16 @@ import {
   CHAT,
   PIN_CODE_UNLOCK,
   PEOPLE,
+  LOGOUT_PENDING,
 } from 'constants/navigationConstants';
+import { ACCOUNT_TYPES } from 'constants/accountsConstants';
 import { UPDATE_USER, PENDING, REGISTERED } from 'constants/userConstants';
 import { LOG_OUT } from 'constants/authConstants';
 import { RESET_APP_SETTINGS } from 'constants/appSettingsConstants';
 import { UPDATE_SESSION } from 'constants/sessionConstants';
 import { BLOCKCHAIN_NETWORK_TYPES } from 'constants/blockchainNetworkConstants';
-import { PRE_KEY_THRESHOLD } from 'configs/connectionKeysConfig';
+
+// utils
 import { delay } from 'utils/common';
 import { getSaltedPin, decryptWallet, normalizeWalletAddress } from 'utils/wallet';
 import Storage from 'services/storage';
@@ -54,7 +62,7 @@ import ChatService from 'services/chat';
 import { getPrivateKeyForCruxPayInit } from 'services/bitcoin';
 import firebase from 'react-native-firebase';
 import Intercom from 'react-native-intercom';
-import { findKeyBasedAccount } from 'utils/accounts';
+import { findKeyBasedAccount, getActiveAccountType } from 'utils/accounts';
 import { toastWalletBackup } from 'utils/toasts';
 import { updateOAuthTokensCB, onOAuthTokensFailedCB } from 'utils/oAuth';
 import { userHasSmartWallet } from 'utils/smartWallet';
@@ -73,10 +81,33 @@ import { getExchangeSupportedAssetsAction } from 'actions/exchangeActions';
 import { labelUserAsLegacyAction } from 'actions/userActions';
 import SDKWrapper from 'services/api';
 
-import type { Dispatch, GetState } from 'reducers/rootReducer';
+// services
+import Storage from 'services/storage';
+import ChatService from 'services/chat';
+import smartWalletService from 'services/smartWallet';
+import { navigate, getNavigationState, getNavigationPathAndParamsState } from 'services/navigation';
 
+// configs
+import { PRE_KEY_THRESHOLD } from 'configs/connectionKeysConfig';
+
+// types
+import type { Dispatch, GetState } from 'reducers/rootReducer';
+import type SDKWrapper from 'services/api';
+
+// actions
 import { saveDbAction } from './dbActions';
 import { getWalletsCreationEventsAction } from './userEventsActions';
+import { setupSentryAction } from './appActions';
+import { signalInitAction } from './signalClientActions';
+import { updateConnectionKeyPairs } from './connectionKeyPairActions';
+import { initOnLoginSmartWalletAccountAction, switchAccountAction } from './accountsActions';
+import { updatePinAttemptsAction } from './walletActions';
+import { fetchTransactionsHistoryAction, patchSmartWalletSentSignedTransactionsAction } from './historyActions';
+import { setAppThemeAction } from './appSettingsActions';
+import { setActiveBlockchainNetworkAction } from './blockchainNetworkActions';
+import { loadFeatureFlagsAction } from './featureFlagsActions';
+import { getExchangeSupportedAssetsAction } from './exchangeActions';
+import { labelUserAsLegacyAction } from './userActions';
 
 
 const Crashlytics = firebase.crashlytics();
@@ -86,8 +117,6 @@ const chat = new ChatService();
 
 export const updateFcmTokenAction = (walletId: string) => {
   return async (dispatch: Dispatch, getState: GetState, api: SDKWrapper) => {
-    const { session: { data: { isOnline } } } = getState();
-    if (!isOnline) return;
     const fcmToken = await firebase.messaging().getToken().catch(() => null);
     dispatch({ type: UPDATE_SESSION, payload: { fcmToken } });
     Intercom.sendTokenToIntercom(fcmToken).catch(() => null);
@@ -95,6 +124,12 @@ export const updateFcmTokenAction = (walletId: string) => {
   };
 };
 
+/**
+ * ### IMPORTANT ###
+ * If you plan to use any method within loginAction that calls
+ * Pillar Wallet SDK API please make sure you wait until it completes
+ * as first method might also perform tokens refresh during the request
+ */
 export const loginAction = (
   pin: ?string,
   privateKey: ?string,
@@ -107,12 +142,11 @@ export const loginAction = (
       connectionKeyPairs: { data: connectionKeyPairs, lastConnectionKeyIndex },
       appSettings: {
         data: {
-          userJoinedBeta = false,
-          firebaseAnalyticsConnectionEnabled = true,
           blockchainNetwork = '',
         },
       },
       oAuthTokens: { data: oAuthTokens },
+      session: { data: { isOnline } },
     } = getState();
     const { wallet: encryptedWallet } = await storage.get('wallet');
 
@@ -132,15 +166,6 @@ export const loginAction = (
     try {
       let wallet;
 
-      /**
-       * we want Firebase Analytics data collection to be off by default,
-       * this check is used for existing users to turn off firebase Analytics
-       * data collection after app update if the `firebaseAnalyticsConnectionEnabled`
-       * was not set before (we set it during onboarding so unset value means existing user)
-       */
-      if (!userJoinedBeta && firebaseAnalyticsConnectionEnabled) {
-        dispatch(setFirebaseAnalyticsCollectionEnabled(false));
-      }
       if (pin) {
         const saltedPin = await getSaltedPin(pin, dispatch);
         // TODO: find how unsafe this change is
@@ -181,21 +206,34 @@ export const loginAction = (
           await onLoginSuccess(privateKeyParam);
         }
 
-        // set API username
+        // set API username (local method)
         api.setUsername(user.username);
 
-        // update FCM
-        dispatch(updateFcmTokenAction(user.walletId));
+        if (isOnline) {
+          // make first api call which can also trigger OAuth fallback methods
+          const userInfo = await api.userInfo(user.walletId);
 
-        // make first api call which can also trigger OAuth fallback methods
-        const userInfo = await api.userInfo(user.walletId);
+          await dispatch(loadFeatureFlagsAction(userInfo));
+
+          // update FCM
+          dispatch(updateFcmTokenAction(user.walletId));
+
+          // save updated user, just in case userInfo endpoint failed check if result is empty
+          if (!isEmpty(userInfo)) {
+            user = merge({}, user, userInfo);
+            dispatch(saveDbAction('user', { user }, true));
+          }
+
+          // to get exchange supported assets in order to show only supported assets on exchange selectors
+          // and show exchange button on supported asset screen only
+          dispatch(getExchangeSupportedAssetsAction());
+        }
 
         // perform signal init
         dispatch(signalInitAction({ ...signalCredentials, ...oAuthTokens }));
 
-        // save updated user
-        user = merge({}, user, userInfo);
-        dispatch(saveDbAction('user', { user }, true));
+        const smartWalletFeatureEnabled = get(getState(), 'featureFlags.data.SMART_WALLET_ENABLED');
+        const bitcoinFeatureEnabled = get(getState(), 'featureFlags.data.BITCOIN_ENABLED');
 
         // update connections
         dispatch(updateConnectionKeyPairs(
@@ -223,13 +261,23 @@ export const loginAction = (
           (!smartWalletFeatureEnabled && blockchainNetwork === BLOCKCHAIN_NETWORK_TYPES.PILLAR_NETWORK) ||
           (!bitcoinFeatureEnabled && blockchainNetwork === BLOCKCHAIN_NETWORK_TYPES.BITCOIN);
 
-        if (revertToDefaultNetwork) {
-          dispatch(setActiveBlockchainNetworkAction(BLOCKCHAIN_NETWORK_TYPES.ETHEREUM));
+        let newBlockchainNetwork = blockchainNetwork;
+
+        if (!newBlockchainNetwork || revertToDefaultNetwork) {
+          newBlockchainNetwork = BLOCKCHAIN_NETWORK_TYPES.ETHEREUM;
         }
 
-        // to get exchange supported assets in order to show only supported assets on exchange selectors
-        // and show exchange button on supported asset screen only
-        dispatch(getExchangeSupportedAssetsAction());
+        dispatch(setActiveBlockchainNetworkAction(newBlockchainNetwork));
+
+        // if smart wallet feature was disabled and prev active account was Smart Wallet then revert to key based
+        const activeAccountType = getActiveAccountType(accounts);
+        if (!smartWalletFeatureEnabled && activeAccountType === ACCOUNT_TYPES.SMART_WALLET) {
+          const keyBasedAccount = accounts.find(({ type }) => type === ACCOUNT_TYPES.KEY_BASED);
+          if (keyBasedAccount) dispatch(switchAccountAction(keyBasedAccount.id));
+        }
+
+        // patch after moved to ethers v4 and signed transaction result was providing new results
+        if (smartWalletFeatureEnabled) dispatch(patchSmartWalletSentSignedTransactionsAction());
       } else {
         api.init();
       }
@@ -424,15 +472,19 @@ export const lockScreenAction = (onLoginSuccess?: Function, errorMessage?: strin
 };
 
 export const logoutAction = () => {
-  return async (dispatch: Dispatch) => {
+  return async (dispatch: Dispatch, getState: GetState) => {
+    navigate(NavigationActions.navigate({ routeName: LOGOUT_PENDING }));
     Intercom.logout();
-    navigate(NavigationActions.navigate({ routeName: ONBOARDING_FLOW }));
-    dispatch({ type: LOG_OUT });
-    dispatch({ type: RESET_APP_SETTINGS, payload: {} });
-    chat.client.resetAccount().catch(() => null);
-    clearWebViewCookies();
     await firebase.iid().delete().catch(() => {});
+    await chat.client.resetAccount().catch(() => null);
     await AsyncStorage.removeItem(WALLET_STORAGE_BACKUP_KEY);
     await storage.removeAll();
+    const smartWalletFeatureEnabled = get(getState(), 'featureFlags.data.SMART_WALLET_ENABLED');
+    if (smartWalletFeatureEnabled) await smartWalletService.reset();
+    clearWebViewCookies();
+    dispatch({ type: LOG_OUT });
+    dispatch({ type: RESET_APP_SETTINGS, payload: {} });
+    dispatch(setAppThemeAction());
+    navigate(NavigationActions.navigate({ routeName: ONBOARDING_FLOW }));
   };
 };

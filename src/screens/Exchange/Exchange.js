@@ -18,7 +18,7 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 import * as React from 'react';
-import { FlatList, TextInput, View } from 'react-native';
+import { FlatList, TextInput as RNTextInput, View } from 'react-native';
 import type { NavigationEventSubscription, NavigationScreenProp } from 'react-navigation';
 import styled from 'styled-components/native';
 import { connect } from 'react-redux';
@@ -33,13 +33,14 @@ import Intercom from 'react-native-intercom';
 import get from 'lodash.get';
 import isEmpty from 'lodash.isempty';
 import { InAppBrowser } from '@matt-block/react-native-in-app-browser';
+import { SDK_PROVIDER } from 'react-native-dotenv';
 
 // components
 import ContainerWithHeader from 'components/Layout/ContainerWithHeader';
 import { ScrollWrapper } from 'components/Layout';
 import ShadowedCard from 'components/ShadowedCard';
 import { BaseText, Paragraph } from 'components/Typography';
-import SelectorInput from 'components/SelectorInput';
+import TextInput from 'components/TextInput';
 import Button from 'components/Button';
 import Spinner from 'components/Spinner';
 import DeploymentView from 'components/DeploymentView';
@@ -99,9 +100,9 @@ const CardRow = styled.View`
   justify-content: space-between;
   align-items: ${props => props.alignTop ? 'flex-start' : 'flex-end'};
   padding: 10px 0;
-  ${props => props.withBorder
+  ${({ withBorder, theme }) => withBorder
     ? `border-bottom-width: 1px;
-      border-bottom-color: ${baseColors.mediumLightGray};`
+      border-bottom-color: ${theme.colors.border};`
     : ''}
 `;
 
@@ -122,7 +123,7 @@ const CardColumn = styled.View`
 const CardText = styled(BaseText)`
   ${fontStyles.regular};
   letter-spacing: 0.18px;
-  color: ${props => props.label ? baseColors.slateBlack : baseColors.darkGray};
+  color: ${({ label, theme }) => label ? theme.colors.text : theme.colors.secondaryText};
   flex-wrap: wrap;
   width: 100%;
 `;
@@ -176,7 +177,7 @@ type Props = {
   assets: Assets,
   searchOffers: (string, string, number) => void,
   offers: Offer[],
-  takeOffer: (string, string, number, string, Function) => Object,
+  takeOffer: (string, string, number, string, Function) => void,
   authorizeWithShapeshift: Function,
   balances: Balances,
   resetOffers: Function,
@@ -281,6 +282,10 @@ const generateFormStructure = (balances: Balances) => {
   });
 
   FromOption.getValidationErrorMessage = ({ selector, input }) => {
+    if (isEmpty(selector)) {
+      return 'Asset should be selected.';
+    }
+
     const { symbol, decimals } = selector;
 
     const isFiat = isFiatCurrency(symbol);
@@ -291,9 +296,7 @@ const generateFormStructure = (balances: Balances) => {
 
     const numericAmount = parseFloat(input || 0);
 
-    if (!Object.keys(selector).length) {
-      return 'Asset should be selected.';
-    } else if (numericAmount === 0) {
+    if (numericAmount === 0) {
       /**
        * 0 is the first number that can be typed therefore we don't want
        * to show any error message on the input, however,
@@ -338,7 +341,6 @@ function SelectorInputTemplate(locals) {
     config: {
       label,
       hasInput,
-      wrapperStyle,
       placeholderSelector,
       placeholderInput,
       options,
@@ -348,6 +350,15 @@ function SelectorInputTemplate(locals) {
       onSelectorOpen,
     },
   } = locals;
+  const value = get(locals, 'value', {});
+  const { selector = {} } = value;
+  const { iconUrl } = selector;
+  const selectedOptionIcon = iconUrl ? `${SDK_PROVIDER}/${iconUrl}?size=3` : '';
+  const selectorValue = {
+    ...value,
+    selector: { ...selector, icon: selectedOptionIcon },
+  };
+
   const errorMessage = locals.error;
   const inputProps = {
     onChange: locals.onChange,
@@ -355,38 +366,40 @@ function SelectorInputTemplate(locals) {
     keyboardType: locals.keyboardType,
     autoCapitalize: locals.autoCapitalize,
     maxLength: 42,
-    label,
     placeholderSelector,
     placeholder: placeholderInput,
     onSelectorOpen,
+    selectorValue,
   };
 
+
   return (
-    <SelectorInput
-      inputProps={inputProps}
-      options={options}
-      horizontalOptions={horizontalOptions}
-      showOptionsTitles={!isEmpty(horizontalOptions)}
-      optionsTitle="CRYPTO"
-      horizontalOptionsTitle="FIAT"
+    <TextInput
       errorMessage={errorMessage}
-      hasInput={hasInput}
-      wrapperStyle={wrapperStyle}
-      value={locals.value}
-      inputAddonText={inputAddonText}
-      inputRef={inputRef}
+      inputProps={inputProps}
+      leftSideText={inputAddonText}
+      numeric
+      selectorOptions={{
+        options,
+        horizontalOptions,
+        showOptionsTitles: !isEmpty(horizontalOptions),
+        optionsTitle: 'CRYPTO',
+        horizontalOptionsTitle: 'FIAT',
+        fullWidth: !hasInput,
+        selectorModalTitle: label,
+      }}
+      getInputRef={inputRef}
     />
   );
 }
 
 class ExchangeScreen extends React.Component<Props, State> {
   exchangeForm: t.form;
-  fromInputRef: TextInput;
+  fromInputRef: RNTextInput;
   listeners: NavigationEventSubscription[];
 
   constructor(props: Props) {
     super(props);
-    this.fromInputRef = React.createRef();
     this.listeners = [];
     this.state = {
       shapeshiftAuthPressed: false,
@@ -437,15 +450,12 @@ class ExchangeScreen extends React.Component<Props, State> {
               options: [],
               wrapperStyle: { marginTop: spacing.mediumLarge },
               placeholderSelector: 'select asset',
-              onSelectorOpen: () => {
-                if (this.fromInputRef) this.fromInputRef.blur();
-              },
+              onSelectorOpen: this.blurFromInput,
             },
           },
         },
       },
     };
-    this.fromInputRef = React.createRef();
     this.triggerSearch = debounce(this.triggerSearch, 500);
   }
 
@@ -467,13 +477,18 @@ class ExchangeScreen extends React.Component<Props, State> {
     this.provideOptions();
     this.listeners = [
       navigation.addListener('didFocus', this.focusInputWithKeyboard),
-      navigation.addListener('didBlur', () => this.fromInputRef.blur()),
+      navigation.addListener('didBlur', this.blurFromInput),
     ];
   }
 
   componentWillUnmount() {
     this.listeners.forEach(listener => listener.remove());
   }
+
+  blurFromInput = () => {
+    if (!this.fromInputRef) return;
+    this.fromInputRef.blur();
+  };
 
   focusInputWithKeyboard = () => {
     setTimeout(() => {
@@ -637,7 +652,7 @@ class ExchangeScreen extends React.Component<Props, State> {
     );
 
     InAppBrowser.open(wyreUrl).catch(error => {
-      console.error('InAppBrowser.error', error);
+      console.error('InAppBrowser.error', error); // eslint-disable-line no-console
     });
   }
 
@@ -1095,7 +1110,6 @@ class ExchangeScreen extends React.Component<Props, State> {
 
     return (
       <ContainerWithHeader
-        backgroundColor={baseColors.white}
         headerProps={{
           leftItems: [{ user: true }],
           rightItems,
@@ -1207,12 +1221,12 @@ const structuredSelector = createStructuredSelector({
   assets: accountAssetsSelector,
 });
 
-const combinedMapStateToProps = (state) => ({
+const combinedMapStateToProps = (state: RootReducerState): $Shape<Props> => ({
   ...structuredSelector(state),
   ...mapStateToProps(state),
 });
 
-const mapDispatchToProps = (dispatch: Dispatch) => ({
+const mapDispatchToProps = (dispatch: Dispatch): $Shape<Props> => ({
   searchOffers: (fromAssetCode, toAssetCode, fromAmount) => dispatch(
     searchOffersAction(fromAssetCode, toAssetCode, fromAmount),
   ),

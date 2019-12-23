@@ -20,6 +20,7 @@
 
 export type BitcoinStore = {
   keys?: { [key: string]: string },
+  addresses?: string[],
 };
 
 export type BitcoinTransactionTarget = {
@@ -31,19 +32,21 @@ export type BitcoinTransactionTarget = {
 export type BitcoinUtxo = {
   address: string,
   txid: string,
+  mintTxid?: string,
   vout: number,
   scriptPubKey: string,
   amount: number,
   satoshis: number,
   height: number,
   confirmations: number,
+  value?: number,
 };
 
 export type BitcoinTransactionPlan = {
   inputs: BitcoinUtxo[],
   outputs: BitcoinTransactionTarget[],
-  fee: number,
-  isValid: boolean,
+  fee?: number,
+  isValid?: boolean,
 };
 
 export type BitcoinAddress = {
@@ -60,4 +63,21 @@ export type BTCBalance = {
 
 export type BitcoinBalance = {
   [address: string]: BTCBalance,
+};
+
+export type BTCTransaction = {
+  _id: string,
+  chain: string,
+  network: string,
+  coinbase: boolean,
+  mintIndex: number,
+  spentTxid: string,
+  mintTxid: string,
+  mintHeight: number,
+  spentHeight: number,
+  address: string,
+  script: string,
+  value: number,
+  confirmations: number,
+  details: Object,
 };

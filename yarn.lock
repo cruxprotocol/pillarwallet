@@ -748,20 +748,6 @@
     lodash "^4.17.11"
     to-fast-properties "^2.0.0"
 
-"@cruxpay/js-sdk@0.1.2":
-  version "0.1.2"
-  resolved "https://registry.yarnpkg.com/@cruxpay/js-sdk/-/js-sdk-0.1.2.tgz#007c515b3db7ac90b2f9772af1c93179ba986183"
-  integrity sha512-yCa9OunQ0dTlnlZBpv7AFzp/AHL+jGlDF92ZX2oovl97BtZU9sQiYFfO90rTdmnUuTBDGmcaWWG+fqom9d1MLw==
-  dependencies:
-    "@mojotech/json-type-validation" "^3.1.0"
-    bip39 "^3.0.2"
-    bitcoinjs-lib "^5.1.4"
-    blockstack "^19.2.5"
-    js-logger "^1.6.0"
-    jsontokens "^2.0.2"
-    node-fetch "^2.6.0"
-    regenerator-runtime "^0.13.3"
-
 "@cruxpay/js-sdk@0.1.5":
   version "0.1.5"
   resolved "https://registry.yarnpkg.com/@cruxpay/js-sdk/-/js-sdk-0.1.5.tgz#88359d62bbed67d1e804ab36d03a9c5ac52cf623"
@@ -774,13 +760,6 @@
     js-logger "^1.6.0"
     jsontokens "^2.0.2"
     regenerator-runtime "^0.13.3"
-
-"@cruxpay/rn-sdk@^0.0.2":
-  version "0.0.2"
-  resolved "https://registry.yarnpkg.com/@cruxpay/rn-sdk/-/rn-sdk-0.0.2.tgz#bea7fe473b4ec495a7900bac95dc9df39a0c4207"
-  integrity sha512-dhr6B28+Ab0nkQ6iaw+UptmlN+6olzI9/8CnNNGyCkgUKE+watfQ4xkiGXL2IKREDVA9or5VtLJ9TXFTXflcpg==
-  dependencies:
-    "@cruxpay/js-sdk" "0.1.2"
 
 "@cruxpay/rn-sdk@https://github.com/cruxprotocol/rn-sdk#release/0.0.3":
   version "0.0.2"
@@ -926,10 +905,10 @@
     universal-user-agent "^2.0.0"
     url-template "^2.0.8"
 
-"@pillarwallet/pillarwallet-nodejs-sdk@1.36.1628":
-  version "1.36.1628"
-  resolved "https://pillarproject.jfrog.io/pillarproject/api/npm/npm/@pillarwallet/pillarwallet-nodejs-sdk/-/@pillarwallet/pillarwallet-nodejs-sdk-1.36.1628.tgz#c122e3b78e653c202e873bd3600654d8c8b9a9da"
-  integrity sha1-wSLjt45lPCAuhzvTYAZU2Mi5qdo=
+"@pillarwallet/pillarwallet-nodejs-sdk@1.38.1666":
+  version "1.38.1666"
+  resolved "https://pillarproject.jfrog.io/pillarproject/api/npm/npm/@pillarwallet/pillarwallet-nodejs-sdk/-/@pillarwallet/pillarwallet-nodejs-sdk-1.38.1666.tgz#8a997e7b4129dc3c92bab26696b68e2ba017e9bd"
+  integrity sha1-ipl+e0Ep3DySurJmlraOK6AX6b0=
   dependencies:
     "@pillarwallet/plr-auth-sdk" "1.1.2-84"
     "@types/ethereumjs-util" "5.1.1"
@@ -1112,10 +1091,10 @@
     openzeppelin-solidity "2.1.2"
     solidity-bytes-utils "0.0.8"
 
-"@smartwallet/sdk@1.0.1":
-  version "1.0.1"
-  resolved "https://pillarproject.jfrog.io/pillarproject/api/npm/npm/@smartwallet/sdk/-/sdk-1.0.1.tgz#cfbaa8c2f90fc0dfe8c1c5d36ea69fa03c6e35a3"
-  integrity sha1-z7qowvkPwN/owcXTbqafoDxuNaM=
+"@smartwallet/sdk@1.1.0":
+  version "1.1.0"
+  resolved "https://pillarproject.jfrog.io/pillarproject/api/npm/npm/@smartwallet/sdk/-/sdk-1.1.0.tgz#887d420921127a72374b80813d9034fee4905377"
+  integrity sha1-iH1CCSESenI3S4CBPZA0/uSQU3c=
   dependencies:
     "@babel/runtime" "^7.4.4"
     "@netgum/types" "^0.1.8"
@@ -9211,11 +9190,6 @@ node-fetch@^2.0.0-alpha.8, node-fetch@^2.1.1, node-fetch@^2.1.2, node-fetch@^2.2
   resolved "https://pillarproject.jfrog.io/pillarproject/api/npm/npm/node-fetch/-/node-fetch-2.4.1.tgz#b2e38f1117b8acbedbe0524f041fb3177188255d"
   integrity sha1-suOPERe4rL7b4FJPBB+zF3GIJV0=
 
-node-fetch@^2.6.0:
-  version "2.6.0"
-  resolved "https://registry.yarnpkg.com/node-fetch/-/node-fetch-2.6.0.tgz#e633456386d4aa55863f676a7ab0daa8fdecb0fd"
-  integrity sha512-8dG4H5ujfvFiqDmVu9fQ5bOHUC15JMjMY/Zumv26oOvvVJjM67KF8koCWIabKQ1GJIa9r2mMZscBq/TbdOcmNA==
-
 node-int64@^0.4.0:
   version "0.4.0"
   resolved "https://pillarproject.jfrog.io/pillarproject/api/npm/npm/node-int64/-/node-int64-0.4.0.tgz#87a9065cdb355d3182d8f94ce11188b825c68a3b"
@@ -13035,6 +13009,11 @@ styled-components@^3.2.5:
     stylis "^3.5.0"
     stylis-rule-sheet "^0.0.10"
     supports-color "^3.2.3"
+
+styled-theming@^2.2.0:
+  version "2.2.0"
+  resolved "https://pillarproject.jfrog.io/pillarproject/api/npm/npm/styled-theming/-/styled-theming-2.2.0.tgz#3084e43d40eaab4bc11ebafd3de04e3622fee37e"
+  integrity sha1-MITkPUDqq0vBHrr9PeBONiL+434=
 
 stylis-rule-sheet@^0.0.10:
   version "0.0.10"

@@ -20,36 +20,52 @@
 import * as React from 'react';
 import { connect } from 'react-redux';
 import styled from 'styled-components/native';
-import { Keyboard, Alert } from 'react-native';
+import { Keyboard, Alert, FlatList } from 'react-native';
 import isEmpty from 'lodash.isempty';
 import t from 'tcomb-form-native';
 import { createStructuredSelector } from 'reselect';
+import type { NavigationScreenProp } from 'react-navigation';
+
+// components
 import Separator from 'components/Separator';
-import { ACCOUNTS, SEND_COLLECTIBLE_CONFIRM } from 'constants/navigationConstants';
-import { COLLECTIBLES } from 'constants/assetsConstants';
-import { CHAT } from 'constants/chatConstants';
-import { ACCOUNT_TYPES } from 'constants/accountsConstants';
-import { baseColors, fontSizes, spacing, UIColors } from 'utils/variables';
 import ContainerWithHeader from 'components/Layout/ContainerWithHeader';
 import { Container, Footer } from 'components/Layout';
 import Button from 'components/Button';
-import SingleInput from 'components/TextInput/SingleInput';
+import TextInput from 'components/TextInput';
 import ListItemWithImage from 'components/ListItem/ListItemWithImage';
-import type { NavigationScreenProp } from 'react-navigation';
-import QRCodeScanner from 'components/QRCodeScanner';
+import AddressScanner from 'components/QRCodeScanner/AddressScanner';
 import Spinner from 'components/Spinner';
+import { HelpText } from 'components/Typography';
+
+// constants
+import { COLLECTIBLES, BTC } from 'constants/assetsConstants';
+import { ACCOUNTS, SEND_COLLECTIBLE_CONFIRM } from 'constants/navigationConstants';
+import { CHAT } from 'constants/chatConstants';
+import { ACCOUNT_TYPES } from 'constants/accountsConstants';
+
+// actions
 import { navigateToSendTokenAmountAction } from 'actions/smartWalletActions';
 import { syncContactsSmartAddressesAction } from 'actions/contactsActions';
-import { isValidETHAddress } from 'utils/validators';
-import { pipe, decodeETHAddress, isCaseInsensitiveMatch } from 'utils/common';
-import { getAccountAddress, getAccountName, getInactiveUserAccounts } from 'utils/accounts';
+
+// utils
+import { addressValidator } from 'utils/validators';
+import { isCaseInsensitiveMatch } from 'utils/common';
 import { isPillarPaymentNetworkActive } from 'utils/blockchainNetworks';
+import { fontSizes, spacing, baseColors } from 'utils/variables';
+import { getAccountAddress, getAccountName, getInactiveUserAccounts } from 'utils/accounts';
+
+// selectors
+import { activeAccountSelector } from 'selectors';
+
+// models, types, services
 import type { Account, Accounts } from 'models/Account';
 import type { ContactSmartAddressData } from 'models/Contacts';
 import type { BlockchainNetwork } from 'models/BlockchainNetwork';
-import { activeAccountSelector } from 'selectors';
+import type { SendNavigateOptions } from 'models/Navigation';
+import type { AssetData } from 'models/Asset';
+import type { Dispatch, RootReducerState } from 'reducers/rootReducer';
+import { themedColors } from 'utils/themes';
 import { isValidCruxID, CruxClientError } from 'services/cruxPay';
-import { HelpText } from 'components/Typography';
 
 type Props = {
   navigation: NavigationScreenProp<*>,
@@ -76,24 +92,17 @@ type State = {
   cruxAccount: Object,
 };
 
-const qrCode = require('assets/images/qr.png');
 const keyWalletIcon = require('assets/icons/icon_ethereum_network.png');
 const smartWalletIcon = require('assets/icons/icon_smart_wallet.png');
 const cruxPayIcon = require('assets/icons/icon_cruxpay.png');
 
 const FormWrapper = styled.View`
   padding: ${spacing.mediumLarge}px ${spacing.large}px 6px;
-  background-color: ${baseColors.white};
-  border-bottom-color: ${baseColors.mediumLightGray};
+  background-color: ${themedColors.card};
+  border-bottom-color: ${themedColors.border};
   border-bottom-width: 1px;
 `;
 
-const ContactCardList = styled.FlatList`
-  background-color: ${UIColors.defaultBackgroundColor};
-`;
-
-// make Dynamic once more tokens supported
-const ETHValidator = (address: string): boolean => pipe(decodeETHAddress, isValidETHAddress)(address);
 const { Form } = t.form;
 
 function AddressInputTemplate(locals) {
@@ -105,37 +114,41 @@ function AddressInputTemplate(locals) {
     placeholder: 'Username, CRUX ID or wallet address',
     value: locals.value,
     keyboardType: locals.keyboardType,
-    textAlign: 'left',
     maxLength: 42,
     letterSpacing: 0.1,
     fontSize: fontSizes.small,
   };
+
   return (
-    <SingleInput
+    <TextInput
       errorMessage={errorMessage}
-      outterIconText="SCAN"
-      outterIcon={qrCode}
-      id="address"
-      onPress={onIconPress}
       inputProps={inputProps}
-      fontSize={fontSizes.medium}
+      iconProps={{
+        icon: 'qrcode',
+        fontSize: 20,
+        onPress: onIconPress,
+      }}
     />
   );
 }
 
-const getFormStructure = (ownAddress: string) => {
+const getFormStructure = (ownAddress: string, token: string) => {
+  const { validator, message } = addressValidator(token);
+
   const Address = t.refinement(t.String, (address): boolean => {
-    return address.length && isValidETHAddress(address) && ownAddress !== address;
+    return address.length && validator(address) && ownAddress !== address;
   });
 
   Address.getValidationErrorMessage = (address): string => {
+    if (address === '') {
+      return 'Address must be provided.';
+    }
+
     if (ownAddress === address) {
       return 'You are not allowed to make transaction to yourself';
     }
-    if (!isValidETHAddress(address)) {
-      return 'Invalid Ethereum Address.';
-    }
-    return 'Address must be provided.';
+
+    return message;
   };
 
   return t.struct({
@@ -151,7 +164,7 @@ const generateFormOptions = (config: Object): Object => ({
 
 class SendTokenContacts extends React.Component<Props, State> {
   _form: t.form;
-  assetData: Object;
+  assetData: AssetData;
   isPPNTransaction: boolean;
 
   constructor(props: Props) {
@@ -159,11 +172,13 @@ class SendTokenContacts extends React.Component<Props, State> {
     const { navigation, blockchainNetworks } = this.props;
     this.assetData = navigation.getParam('assetData', {});
     this.isPPNTransaction = isPillarPaymentNetworkActive(blockchainNetworks);
+    const { token } = this.assetData;
+
     this.state = {
       isScanning: false,
       isResolvingCruxId: false,
       value: { address: '' },
-      formStructure: getFormStructure(this.props.wallet.address),
+      formStructure: getFormStructure(this.props.wallet.address, token),
       cruxAccount: {
         cruxID: null,
         valid: false,
@@ -328,41 +343,36 @@ class SendTokenContacts extends React.Component<Props, State> {
     return null;
   };
 
-  navigateToNextScreen(ethAddress, cruxID) {
+  navigateToNextScreen(receiverAddress, cruxID) {
+    const { navigation, navigateToSendTokenAmount } = this.props;
+
     if (this.assetData.tokenType === COLLECTIBLES) {
-      this.props.navigation.navigate(SEND_COLLECTIBLE_CONFIRM, {
+      navigation.navigate(SEND_COLLECTIBLE_CONFIRM, {
         assetData: this.assetData,
-        receiver: ethAddress,
+        receiver: receiverAddress,
         source: 'Contact',
       });
       return;
     }
-    this.props.navigateToSendTokenAmount({
+    navigateToSendTokenAmount({
       assetData: this.assetData,
-      receiver: ethAddress,
+      receiver: receiverAddress,
       source: 'Contact',
       cruxID,
     });
   }
 
-  render() {
+  renderContacts() {
     const {
       localContacts = [],
       contactsSmartAddresses,
-      contactsSmartAddressesSynced,
-      isOnline,
       accounts,
     } = this.props;
     const {
-      isScanning,
-      formStructure,
       value,
       cruxAccount,
-      isResolvingCruxId,
     } = this.state;
     const isSearchQueryProvided = !!(value && value.address.length);
-    const formOptions = generateFormOptions({ onIconPress: this.handleQRScannerOpen });
-
     const userAccounts = getInactiveUserAccounts(accounts).map(account => ({
       ...account,
       ethAddress: getAccountAddress(account),
@@ -371,10 +381,10 @@ class SendTokenContacts extends React.Component<Props, State> {
       isUserAccount: true,
     }));
 
-    // asset transfer between user accounts only in regular, but not in PPN send flow
     let contactsToRender = this.isPPNTransaction
       ? [...localContacts]
       : [...userAccounts, ...localContacts];
+
     if (isSearchQueryProvided) {
       const searchStr = value.address.toLowerCase();
       contactsToRender = contactsToRender.filter(({ username, ethAddress }) => {
@@ -412,11 +422,49 @@ class SendTokenContacts extends React.Component<Props, State> {
         });
     }
 
-    const tokenName = this.assetData.tokenType === COLLECTIBLES ? this.assetData.name : this.assetData.token;
+    if (!contactsToRender.length) {
+      return null;
+    }
+
+    return (
+      <FlatList
+        data={contactsToRender}
+        renderItem={this.renderContact}
+        keyExtractor={({ username }) => username}
+        ItemSeparatorComponent={() => <Separator spaceOnLeft={82} />}
+        contentContainerStyle={{ paddingTop: spacing.mediumLarge, paddingBottom: 40 }}
+      />
+    );
+  }
+
+  render() {
+    const {
+      localContacts = [],
+      contactsSmartAddressesSynced,
+      isOnline,
+    } = this.props;
+    const {
+      cruxAccount,
+      isResolvingCruxId,
+    } = this.state;
+    const { tokenType, name, token } = this.assetData;
+    const isCollectible = tokenType === COLLECTIBLES;
+
+    const { isScanning, formStructure, value } = this.state;
+    const isSearchQueryProvided = !!(value && value.address.length);
+    const formOptions = generateFormOptions({ onIconPress: this.handleQRScannerOpen });
+
+    const showContacts = isCollectible || token !== BTC;
+    const defaultAssetName = this.isPPNTransaction ? 'synthetic asset' : 'asset';
+    const tokenName = isCollectible ? (name || token) : (token || defaultAssetName);
+    const headerTitle = `Send ${tokenName}`;
     const showSpinner = (isOnline && !contactsSmartAddressesSynced && !isEmpty(localContacts)) || (isResolvingCruxId);
 
     return (
-      <ContainerWithHeader headerProps={{ centerItems: [{ title: `Send ${tokenName}` }] }} inset={{ bottom: 0 }}>
+      <ContainerWithHeader
+        headerProps={{ centerItems: [{ title: headerTitle }] }}
+        inset={{ bottom: 0 }}
+      >
         <FormWrapper>
           {!!cruxAccount.cruxID && !cruxAccount.valid &&
           <HelpText style={{ color: baseColors.fireEngineRed }}>
@@ -435,24 +483,14 @@ class SendTokenContacts extends React.Component<Props, State> {
           />
         </FormWrapper>
         {showSpinner && <Container center><Spinner /></Container>}
-        {!!contactsToRender.length &&
-          <ContactCardList
-            data={contactsToRender}
-            renderItem={this.renderContact}
-            keyExtractor={({ username }) => username}
-            ItemSeparatorComponent={() => <Separator spaceOnLeft={82} />}
-            contentContainerStyle={{ paddingTop: spacing.mediumLarge, paddingBottom: 40 }}
-          />
-        }
-        <QRCodeScanner
-          validator={ETHValidator}
-          dataFormatter={decodeETHAddress}
+        {showContacts && this.renderContacts()}
+        <AddressScanner
           isActive={isScanning}
           onCancel={this.handleQRScannerClose}
           onRead={this.handleQRRead}
         />
         {isSearchQueryProvided &&
-          <Footer keyboardVerticalOffset={35} backgroundColor={UIColors.defaultBackgroundColor}>
+          <Footer keyboardVerticalOffset={35}>
             <Button flexRight small disabled={!value.address.length} title="Next" onPress={this.handleFormSubmit} />
           </Footer>
         }
@@ -468,7 +506,7 @@ const mapStateToProps = ({
   session: { data: { contactsSmartAddressesSynced, isOnline } },
   blockchainNetwork: { data: blockchainNetworks },
   cruxPay,
-}) => ({
+}: RootReducerState): $Shape<Props> => ({
   accounts,
   localContacts,
   wallet,
@@ -488,8 +526,8 @@ const combinedMapStateToProps = (state) => ({
   ...mapStateToProps(state),
 });
 
-const mapDispatchToProps = (dispatch) => ({
-  navigateToSendTokenAmount: (options) => dispatch(navigateToSendTokenAmountAction(options)),
+const mapDispatchToProps = (dispatch: Dispatch) => ({
+  navigateToSendTokenAmount: (options: SendNavigateOptions) => dispatch(navigateToSendTokenAmountAction(options)),
   syncContactsSmartAddresses: () => dispatch(syncContactsSmartAddressesAction()),
 });
 

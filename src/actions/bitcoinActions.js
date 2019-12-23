@@ -139,16 +139,17 @@ import {
   SET_BITCOIN_ADDRESSES,
   BITCOIN_WALLET_CREATION_FAILED,
   UPDATE_UNSPENT_TRANSACTIONS,
+  UPDATE_BITCOIN_TRANSACTIONS,
 } from 'constants/bitcoinConstants';
+import { UPDATE_SUPPORTED_ASSETS, UPDATE_ASSETS } from 'constants/assetsConstants';
 import {
   keyPairAddress,
   getAddressUtxos,
   getAddressBalance,
-  importKeyPair,
-  exportKeyPair,
   rootFromMnemonic,
   transactionFromPlan,
   sendRawTransaction,
+  getBTCTransactions,
 } from 'services/bitcoin';
 import Storage from 'services/storage';
 
@@ -159,6 +160,7 @@ import type {
   UpdateBitcoinBalanceAction,
   UpdateUnspentTransactionsAction,
   BitcoinWalletCreationFailedAction,
+  UpdateBTCTransactionsAction,
 } from 'reducers/bitcoinReducer';
 import type { EthereumWallet } from 'models/Wallet';
 import type {
@@ -167,7 +169,10 @@ import type {
   BitcoinUtxo,
   BitcoinStore,
   BTCBalance,
+  BTCTransaction,
 } from 'models/Bitcoin';
+
+import { initialAssets } from 'fixtures/assets';
 
 import { saveDbAction } from 'actions/dbActions';
 
@@ -204,19 +209,29 @@ const updateBitcoinUnspentTransactions = (
   unspentTransactions,
 });
 
+const updateBTCTransactions = (
+  address: string,
+  transactions: BTCTransaction[],
+): UpdateBTCTransactionsAction => ({
+  type: UPDATE_BITCOIN_TRANSACTIONS,
+  address,
+  transactions,
+});
+
 const bitcoinWalletCreationFailed = (): BitcoinWalletCreationFailedAction => ({
   type: BITCOIN_WALLET_CREATION_FAILED,
 });
 
 export const initializeBitcoinWalletAction = (wallet: EthereumWallet) => {
   return async (dispatch: Dispatch) => {
-    const { mnemonic, path } = wallet;
-    if (!mnemonic) {
+    const { mnemonic, privateKey, path } = wallet;
+
+    if (!mnemonic && !privateKey) {
       await dispatch(bitcoinWalletCreationFailed());
       return;
     }
 
-    let seed = wallet.privateKey;
+    let seed = privateKey;
     if (mnemonic && mnemonic !== 'ENCRYPTED') {
       seed = mnemonic;
     }
@@ -236,7 +251,7 @@ export const initializeBitcoinWalletAction = (wallet: EthereumWallet) => {
     }
 
     await dispatch(saveDb({
-      keys: { [address]: exportKeyPair(keyPair) },
+      addresses: [address],
     }));
 
     await dispatch(setBitcoinAddressesAction([address]));
@@ -245,9 +260,13 @@ export const initializeBitcoinWalletAction = (wallet: EthereumWallet) => {
 
 export const loadBitcoinAddressesAction = () => {
   return async (dispatch: Dispatch) => {
-    const { keys = {} } = await loadDb();
+    const { addresses = [], keys = {} } = await loadDb();
 
-    const loaded: string[] = Object.keys(keys);
+    const migrateAddresses = Object.keys(keys);
+    if (addresses.length === 0 && migrateAddresses.length > 0) {
+      await dispatch(saveDb({ addresses: migrateAddresses }));
+    }
+    const loaded: string[] = addresses.length > 0 ? addresses : migrateAddresses;
 
     if (loaded.length) {
       dispatch(setBitcoinAddressesAction(loaded));
@@ -271,11 +290,34 @@ const fetchBalanceAction = (address: string): Promise<BitcoinReducerAction> => {
     .then(balance => updateBitcoinBalance(address, balance));
 };
 
+const fetchBTCTransactionsAction = (address: string): Promise<BitcoinReducerAction> => {
+  return getBTCTransactions(address)
+    .then(transactions => updateBTCTransactions(address, transactions));
+};
+
 const transactionSendingFailed = () => {
   Toast.show({
     message: 'There was an error sending the transaction',
     type: 'warning',
     title: 'Transaction could not be sent',
+    autoClose: false,
+  });
+};
+
+const fetchUnspentTxFailed = () => {
+  Toast.show({
+    message: 'There was an error fetching the Bitcoin unspent transactions',
+    type: 'warning',
+    title: 'Cannot fetch unspent transactions',
+    autoClose: false,
+  });
+};
+
+const fetchBTCTransactionsFailed = () => {
+  Toast.show({
+    message: 'There was an error fetching the Bitcoin transactions',
+    type: 'warning',
+    title: 'Cannot fetch transactions',
     autoClose: false,
   });
 };
@@ -298,25 +340,40 @@ const transactionSent = () => {
   });
 };
 
-export const sendTransactionAction = (plan: BitcoinTransactionPlan) => {
+export const sendTransactionAction = (wallet: EthereumWallet, plan: BitcoinTransactionPlan, callback: Function) => {
   return async () => {
-    const { keys = {} } = await loadDb();
+    const { mnemonic, privateKey, path } = wallet;
 
+    let seed = privateKey;
+    if (mnemonic && mnemonic !== 'ENCRYPTED') {
+      seed = mnemonic;
+    }
+
+    const root = await rootFromMnemonic(seed);
+    const keyPair = root.derivePath(path);
+
+    // TODO: Multiple Paths support should map an address to a custom path
     const rawTransaction = transactionFromPlan(
       plan,
-      (address: string) => importKeyPair(keys[address]),
+      () => keyPair,
     );
 
-    sendRawTransaction(rawTransaction)
-      .then((txid) => {
-        if (!txid) {
-          transactionSendingFailed();
-          return;
-        }
+    if (!rawTransaction) {
+      callback({ isSuccess: false });
+    } else {
+      sendRawTransaction(rawTransaction)
+        .then((txid) => {
+          if (!txid) {
+            transactionSendingFailed();
+            callback({ isSuccess: false });
+            return;
+          }
 
-        transactionSent();
-      })
-      .catch(transactionSendingFailed);
+          callback({ isSuccess: true });
+          transactionSent();
+        })
+        .catch(transactionSendingFailed);
+    }
   };
 };
 
@@ -332,7 +389,7 @@ export const refreshBitcoinUnspentTxAction = (force: boolean) => {
     await Promise.all(addressesToUpdate.map(({ address }) => {
       return fetchUnspentTxAction(address)
         .then(action => dispatch(action))
-        .catch(fetchBalanceFailed);
+        .catch(fetchUnspentTxFailed);
     }));
   };
 };
@@ -350,6 +407,43 @@ export const refreshBitcoinBalanceAction = (force: boolean) => {
       return fetchBalanceAction(address)
         .then(action => dispatch(action))
         .catch(fetchBalanceFailed);
+    }));
+  };
+};
+
+export const refreshBTCTransactionsAction = (force: boolean) => {
+  return async (dispatch: Dispatch, getState: GetState) => {
+    const {
+      assets: { data: assets, supportedAssets },
+      bitcoin: { data: { addresses } },
+    } = getState();
+
+    const addressesToUpdate = force ? addresses : outdatedAddresses(addresses);
+    if (!addressesToUpdate.length) {
+      return;
+    }
+
+    await Promise.all(addressesToUpdate.map(({ address }) => {
+      if (supportedAssets && !supportedAssets.some(e => e.symbol === 'BTC')) {
+        const btcAsset = initialAssets.find(e => e.symbol === 'BTC');
+        if (btcAsset) {
+          const updatedSupportedAssets = supportedAssets.concat(btcAsset);
+          assets[address] = { BTC: btcAsset };
+          dispatch({
+            type: UPDATE_ASSETS,
+            payload: assets,
+          });
+          dispatch(saveDbAction('assets', { assets }, true));
+          dispatch({
+            type: UPDATE_SUPPORTED_ASSETS,
+            payload: updatedSupportedAssets,
+          });
+          dispatch(saveDbAction('supportedAssets', { supportedAssets: updatedSupportedAssets }, true));
+        }
+      }
+      return fetchBTCTransactionsAction(address)
+        .then(action => dispatch(action))
+        .catch(fetchBTCTransactionsFailed);
     }));
   };
 };

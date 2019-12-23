@@ -17,19 +17,16 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
+
 import * as React from 'react';
-import {
-  RefreshControl,
-  Platform,
-  View,
-  // FlatList,
-} from 'react-native';
+import { RefreshControl, Platform, View } from 'react-native';
 import { connect } from 'react-redux';
 import styled from 'styled-components/native';
-import type { NavigationScreenProp } from 'react-navigation';
 import { ImageCacheManager } from 'react-native-cached-image';
 import { createStructuredSelector } from 'reselect';
-import { baseColors, UIColors } from 'utils/variables';
+import type { NavigationScreenProp } from 'react-navigation';
+
+// actions
 import {
   syncContactAction,
   disconnectContactAction,
@@ -39,32 +36,49 @@ import {
 } from 'actions/contactsActions';
 import { fetchContactTransactionsAction } from 'actions/historyActions';
 import { fetchContactBadgesAction } from 'actions/badgesActions';
-import { ScrollWrapper } from 'components/Layout';
-import { BADGE, CHAT, CONTACT, SEND_TOKEN_FROM_CONTACT_FLOW, SMART_WALLET_INTRO } from 'constants/navigationConstants';
 import { logScreenViewAction } from 'actions/analyticsActions';
-import { DISCONNECT, MUTE, BLOCK } from 'constants/connectionsConstants';
+
+// constants
+import { BADGE, CHAT, CONTACT, SEND_TOKEN_FROM_CONTACT_FLOW, SMART_WALLET_INTRO } from 'constants/navigationConstants';
+import {
+  DISCONNECT,
+  MUTE,
+  BLOCK,
+  STATUS_MUTED,
+  STATUS_BLOCKED,
+} from 'constants/connectionsConstants';
 import { TRANSACTION_EVENT } from 'constants/historyConstants';
 import { COLLECTIBLE_TRANSACTION } from 'constants/collectiblesConstants';
 import { TYPE_ACCEPTED } from 'constants/invitationsConstants';
+
+// components
+import { ScrollWrapper } from 'components/Layout';
 import ContainerWithHeader from 'components/Layout/ContainerWithHeader';
 import ProfileImage from 'components/ProfileImage';
 import CircleButton from 'components/CircleButton';
 import ActivityFeed from 'components/ActivityFeed';
 import BadgeTouchableItem from 'components/BadgeTouchableItem';
 import DeploymentView from 'components/DeploymentView';
+import EmptyStateParagraph from 'components/EmptyState/EmptyStateParagraph';
+import Spinner from 'components/Spinner';
 
+// utils
+import { baseColors, UIColors } from 'utils/variables';
 import { getSmartWalletStatus } from 'utils/smartWallet';
 import { mapOpenSeaAndBCXTransactionsHistory, mapTransactionsHistory } from 'utils/feedData';
-import EmptyStateParagraph from 'components/EmptyState/EmptyStateParagraph';
-// import { CollapsibleSection } from 'components/CollapsibleSection';
-import Spinner from 'components/Spinner';
 import { isCaseInsensitiveMatch } from 'utils/common';
+
+// models
 import type { ApiUser, ContactSmartAddressData } from 'models/Contacts';
 import type { SmartWalletStatus } from 'models/SmartWalletStatus';
 import type { Accounts } from 'models/Account';
 import type { Badges } from 'models/Badge';
+import type { Dispatch, RootReducerState } from 'reducers/rootReducer';
+
+// selectors
 import { accountHistorySelector } from 'selectors/history';
 import { accountCollectiblesHistorySelector } from 'selectors/collectibles';
+
 import ConnectionConfirmationModal from './ConnectionConfirmationModal';
 import ManageContactModal from './ManageContactModal';
 
@@ -109,7 +123,7 @@ type Props = {
   navigation: NavigationScreenProp<*>,
   contacts: ApiUser[],
   syncContact: Function,
-  fetchContactTransactions: (contactAddress: string, asset?: string) => Function,
+  fetchContactTransactions: (contactAddress: string, asset?: string) => void,
   chats: Object[],
   session: Object,
   disconnectContact: Function,
@@ -119,7 +133,7 @@ type Props = {
   accounts: Accounts,
   history: Object[],
   openSeaTxHistory: Object[],
-  contactsBadges: Badges,
+  contactsBadges: { [contactId: string]: Badges },
   fetchContactBadges: Function,
   isFetchingBadges: boolean,
   logScreenView: (view: string, screen: string) => void,
@@ -293,10 +307,10 @@ class Contact extends React.Component<Props, State> {
     if (manageContactType === DISCONNECT) {
       this.props.disconnectContact(theContact.id);
     } else if (manageContactType === MUTE) {
-      const mute = !(status === 'muted');
+      const mute = status !== STATUS_MUTED; // toggle
       this.props.muteContact(theContact.id, mute);
     } else if (manageContactType === BLOCK) {
-      const block = !(status === 'blocked');
+      const block = status !== STATUS_BLOCKED; // toggle
       this.props.blockContact(theContact.id, block);
     }
 
@@ -528,8 +542,11 @@ const mapStateToProps = ({
   session: { data: session },
   smartWallet: smartWalletState,
   accounts: { data: accounts },
-  badges: { contactsBadges, isFetchingBadges },
-}) => ({
+  badges: {
+    contactsBadges,
+    isFetchingBadges,
+  },
+}: RootReducerState): $Shape<Props> => ({
   contacts,
   chats,
   session,
@@ -545,12 +562,12 @@ const structuredSelector = createStructuredSelector({
   openSeaTxHistory: accountCollectiblesHistorySelector,
 });
 
-const combinedMapStateToProps = (state) => ({
+const combinedMapStateToProps = (state: RootReducerState): $Shape<Props> => ({
   ...structuredSelector(state),
   ...mapStateToProps(state),
 });
 
-const mapDispatchToProps = (dispatch: Function) => ({
+const mapDispatchToProps = (dispatch: Dispatch): $Shape<Props> => ({
   syncContact: userId => dispatch(syncContactAction(userId)),
   fetchContactTransactions: (contactAddress) => dispatch(fetchContactTransactionsAction(contactAddress)),
   disconnectContact: (contactId: string) => dispatch(disconnectContactAction(contactId)),
