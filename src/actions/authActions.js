@@ -56,36 +56,19 @@ import { BLOCKCHAIN_NETWORK_TYPES } from 'constants/blockchainNetworkConstants';
 // utils
 import { delay } from 'utils/common';
 import { getSaltedPin, decryptWallet, normalizeWalletAddress } from 'utils/wallet';
-import Storage from 'services/storage';
-import { navigate, getNavigationState, getNavigationPathAndParamsState } from 'services/navigation';
-import ChatService from 'services/chat';
-import { getPrivateKeyForCruxPayInit } from 'services/bitcoin';
-import firebase from 'react-native-firebase';
-import Intercom from 'react-native-intercom';
 import { findKeyBasedAccount, getActiveAccountType } from 'utils/accounts';
 import { toastWalletBackup } from 'utils/toasts';
 import { updateOAuthTokensCB, onOAuthTokensFailedCB } from 'utils/oAuth';
 import { userHasSmartWallet } from 'utils/smartWallet';
 import { clearWebViewCookies } from 'utils/exchange';
 import { setKeychainDataObject } from 'utils/keychain';
-import { setupSentryAction } from 'actions/appActions';
-import { signalInitAction } from 'actions/signalClientActions';
-import { updateConnectionKeyPairs } from 'actions/connectionKeyPairActions';
-import { initOnLoginSmartWalletAccountAction, initOnLoginCruxPayAction } from 'actions/accountsActions';
-import { updatePinAttemptsAction } from 'actions/walletActions';
-import { fetchTransactionsHistoryAction } from 'actions/historyActions';
-import { setFirebaseAnalyticsCollectionEnabled } from 'actions/appSettingsActions';
-import { setActiveBlockchainNetworkAction } from 'actions/blockchainNetworkActions';
-import { fetchFeatureFlagsAction } from 'actions/featureFlagsActions';
-import { getExchangeSupportedAssetsAction } from 'actions/exchangeActions';
-import { labelUserAsLegacyAction } from 'actions/userActions';
-import SDKWrapper from 'services/api';
 
 // services
 import Storage from 'services/storage';
 import ChatService from 'services/chat';
 import smartWalletService from 'services/smartWallet';
 import { navigate, getNavigationState, getNavigationPathAndParamsState } from 'services/navigation';
+import { getPrivateKeyForCruxPayInit } from 'services/bitcoin';
 
 // configs
 import { PRE_KEY_THRESHOLD } from 'configs/connectionKeysConfig';
@@ -100,7 +83,7 @@ import { getWalletsCreationEventsAction } from './userEventsActions';
 import { setupSentryAction } from './appActions';
 import { signalInitAction } from './signalClientActions';
 import { updateConnectionKeyPairs } from './connectionKeyPairActions';
-import { initOnLoginSmartWalletAccountAction, switchAccountAction } from './accountsActions';
+import { initOnLoginSmartWalletAccountAction, switchAccountAction, initOnLoginCruxPayAction } from './accountsActions';
 import { updatePinAttemptsAction } from './walletActions';
 import { fetchTransactionsHistoryAction, patchSmartWalletSentSignedTransactionsAction } from './historyActions';
 import { setAppThemeAction } from './appSettingsActions';
@@ -157,11 +140,6 @@ export const loginAction = (
       payload: DECRYPTING,
     });
     await delay(100);
-
-    await dispatch(fetchFeatureFlagsAction()); // wait until fetches new flags
-    const smartWalletFeatureEnabled = get(getState(), 'featureFlags.data.SMART_WALLET_ENABLED');
-    const cruxPayFeatureEnabled = get(getState(), 'featureFlags.data.CRUXPAY_ENABLED');
-    const bitcoinFeatureEnabled = get(getState(), 'featureFlags.data.BITCOIN_ENABLED');
 
     try {
       let wallet;
@@ -234,6 +212,7 @@ export const loginAction = (
 
         const smartWalletFeatureEnabled = get(getState(), 'featureFlags.data.SMART_WALLET_ENABLED');
         const bitcoinFeatureEnabled = get(getState(), 'featureFlags.data.BITCOIN_ENABLED');
+        const cruxPayFeatureEnabled = get(getState(), 'featureFlags.data.CRUXPAY_ENABLED');
 
         // update connections
         dispatch(updateConnectionKeyPairs(
