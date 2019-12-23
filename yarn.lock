@@ -761,6 +761,10 @@
     jsontokens "^2.0.2"
     regenerator-runtime "^0.13.3"
 
+"@cruxpay/rn-crux-ui@git+https://github.com/cruxprotocol/rn-crux-ui.git":
+  version "0.0.1"
+  resolved "git+https://github.com/cruxprotocol/rn-crux-ui.git#e4b1df4332ca0cc7a0050d05b63f0a604a4bbbaa"
+
 "@cruxpay/rn-sdk@https://github.com/cruxprotocol/rn-sdk#release/0.0.3":
   version "0.0.2"
   resolved "https://github.com/cruxprotocol/rn-sdk#12a881add780dd94cc82bc75a0b91afefc021b5f"

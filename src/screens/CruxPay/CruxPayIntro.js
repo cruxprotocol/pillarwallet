@@ -33,7 +33,7 @@ import { baseColors, fontStyles, spacing } from 'utils/variables';
 import { responsiveSize } from 'utils/ui';
 
 
-import { CRUXPAY_REGISTRATION } from 'constants/navigationConstants';
+import { CRUXPAY_REGISTRATION, CRUXPAY_INJECTED_SCREEN } from 'constants/navigationConstants';
 
 
 type Props = {
@@ -112,16 +112,17 @@ class CruxPayIntro extends React.PureComponent<Props, State> {
               Be noted that all address selected would now be publicly exposed.
             </BodyText>
             <BodyText>
-              For more information, visit <TextLink onPress={() => Linking.openURL('https://cruxpay.com')}>
+              For more information, visit&nbsp;
+              <TextLink onPress={() => Linking.openURL('https://cruxpay.com')}>
                 https://cruxpay.com
-            </TextLink>
+              </TextLink>
             </BodyText>
           </CustomWrapper>
           <ButtonWrapper>
             <Button
               block
               title="Setup CruxPay"
-              onPress={() => navigation.navigate(CRUXPAY_REGISTRATION, { pageTitle: 'Register CruxPay' })}
+              onPress={() => navigation.navigate(CRUXPAY_INJECTED_SCREEN, { pageTitle: 'Register CruxPay' })}
               style={{
                 backgroundColor: baseColors.persianBlue,
                 marginTop: 40,
