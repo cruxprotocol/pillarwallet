@@ -23,7 +23,9 @@ import type { NavigationScreenProp } from 'react-navigation';
 import { connect } from 'react-redux';
 import { Linking } from 'react-native';
 import { CachedImage } from 'react-native-cached-image';
+import { createStructuredSelector } from 'reselect';
 
+// components
 import ContainerWithHeader from 'components/Layout/ContainerWithHeader';
 import { ScrollWrapper, Wrapper } from 'components/Layout';
 import { MediumText, BoldText, TextLink } from 'components/Typography';
@@ -33,17 +35,40 @@ import { baseColors, fontStyles, spacing } from 'utils/variables';
 import { responsiveSize } from 'utils/ui';
 
 
-import { CRUXPAY_REGISTRATION, CRUXPAY_INJECTED_SCREEN } from 'constants/navigationConstants';
+import { accountAssetsSelector } from 'selectors/assets';
+
+// constants
+import { CRUXPAY_REGISTRATION, CRUXPAY_INJECTED_SCREEN, HOME } from 'constants/navigationConstants';
+
+// model
+import type { Assets } from 'models/Asset';
+
+// service
+import {
+  getCruxWebViewInput,
+  getExtendedInputs,
+  confirmCloseCruxUI,
+  processRegisterSuccess,
+} from 'services/cruxPay';
+
+
+// actions
+import { setBrowsingWebViewAction } from 'actions/appSettingsActions';
+import { loadCruxIDStateAction } from 'actions/cruxPayActions';
 
 
 type Props = {
   navigation: NavigationScreenProp<*>,
+  assets: Assets,
+  cruxPay: Object,
+  user: Object,
   addNetwork: Function,
   baseFiatCurrency: ?string,
 }
 
 type State = {
   showDeployPayOptions: boolean,
+  loadCruxIDState: Function,
 }
 
 const CustomWrapper = styled.View`
@@ -81,9 +106,25 @@ const InlineIconTitle = styled.View`
 const CruxPayIcon = require('assets/images/logo_cruxpay.png');
 
 class CruxPayIntro extends React.PureComponent<Props, State> {
+  onClosePress = () => {
+    const { navigation } = this.props;
+    confirmCloseCruxUI(navigation);
+  };
+
+  onRegisterSuccess = async (map: Object) => {
+    const { navigation, cruxPay, loadCruxIDState } = this.props;
+    await processRegisterSuccess(loadCruxIDState, cruxPay, navigation, map);
+  };
+
+  getInputExtension = () => {
+    const { user: { username }, assets, cruxPay: { cruxID } } = this.props;
+    return getExtendedInputs(assets, cruxID, username);
+  };
+
   render() {
     const {
       navigation,
+      cruxPay,
     } = this.props;
 
     return (
@@ -122,7 +163,14 @@ class CruxPayIntro extends React.PureComponent<Props, State> {
             <Button
               block
               title="Setup CruxPay"
-              onPress={() => navigation.navigate(CRUXPAY_INJECTED_SCREEN, { pageTitle: 'Register CruxPay' })}
+              onPress={() => navigation.navigate(CRUXPAY_INJECTED_SCREEN, {
+                pageTitle: 'Register CruxPay',
+                onClosePress: this.onClosePress,
+                onRegisterSuccess: this.onRegisterSuccess,
+                inputExtension: this.getInputExtension(),
+                cruxClient: cruxPay.cruxClient,
+                getCruxWebViewInput,
+              })}
               style={{
                 backgroundColor: baseColors.persianBlue,
                 marginTop: 40,
@@ -138,4 +186,26 @@ class CruxPayIntro extends React.PureComponent<Props, State> {
   }
 }
 
-export default connect()(CruxPayIntro);
+const structuredSelector = createStructuredSelector({
+  assets: accountAssetsSelector,
+});
+
+const mapStateToProps = ({
+  user: { data: user },
+  cruxPay,
+}) => ({
+  user,
+  cruxPay,
+});
+
+const combinedMapStateToProps = (state) => ({
+  ...structuredSelector(state),
+  ...mapStateToProps(state),
+});
+
+const mapDispatchToProps = (dispatch: Function) => ({
+  setBrowsingWebView: isBrowsing => dispatch(setBrowsingWebViewAction(isBrowsing)),
+  loadCruxIDState: () => dispatch(loadCruxIDStateAction()),
+});
+
+export default connect(combinedMapStateToProps, mapDispatchToProps)(CruxPayIntro);
