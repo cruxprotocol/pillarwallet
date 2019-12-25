@@ -38,7 +38,7 @@ import { responsiveSize } from 'utils/ui';
 import { accountAssetsSelector } from 'selectors/assets';
 
 // constants
-import { CRUXPAY_REGISTRATION, CRUXPAY_INJECTED_SCREEN, HOME } from 'constants/navigationConstants';
+import { CRUXPAY_INJECTED_SCREEN } from 'constants/navigationConstants';
 
 // model
 import type { Assets } from 'models/Asset';
@@ -64,11 +64,11 @@ type Props = {
   user: Object,
   addNetwork: Function,
   baseFiatCurrency: ?string,
+  loadCruxIDState: Function,
 }
 
 type State = {
   showDeployPayOptions: boolean,
-  loadCruxIDState: Function,
 }
 
 const CustomWrapper = styled.View`
@@ -112,8 +112,8 @@ class CruxPayIntro extends React.PureComponent<Props, State> {
   };
 
   onRegisterSuccess = async (map: Object) => {
-    const { navigation, cruxPay, loadCruxIDState } = this.props;
-    await processRegisterSuccess(loadCruxIDState, cruxPay, navigation, map);
+    const { navigation, cruxPay: { cruxID }, loadCruxIDState } = this.props;
+    await processRegisterSuccess(loadCruxIDState, cruxID, navigation, map);
   };
 
   getInputExtension = () => {

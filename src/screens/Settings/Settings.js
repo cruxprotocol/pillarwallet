@@ -65,7 +65,6 @@ import {
   CHANGE_PIN_FLOW,
   BACKUP_WALLET_IN_SETTINGS_FLOW,
   REVEAL_BACKUP_PHRASE,
-  CRUXPAY_REGISTRATION,
   CRUXPAY_INJECTED_SCREEN,
 } from 'constants/navigationConstants';
 import { supportedFiatCurrencies, defaultFiatCurrency } from 'constants/assetsConstants';
@@ -312,7 +311,7 @@ const formCruxPayItems = (that, cruxID) => {
       key: 'manageCruxPay',
       title: 'Manage your CRUX ID',
       body: `Configure ${cruxID}`,
-      onPress: that.navigateToCruxRegistration,
+      onPress: that.navigateToCruxManage,
       label: 'new',
       minHeight: 96,
     },
@@ -474,8 +473,8 @@ class Settings extends React.Component<Props, State> {
 
   onPutAddressSuccess = async (map: Object) => {
     // TODO: discuss what to do if a few failed?
-    const { navigation, cruxPay, loadCruxIDState } = this.props;
-    await processPutAddressSuccess(loadCruxIDState, cruxPay, navigation, map);
+    const { navigation, cruxPay: { cruxID }, loadCruxIDState } = this.props;
+    await processPutAddressSuccess(loadCruxIDState, cruxID, navigation, map);
   };
 
   getInputExtension = () => {
@@ -483,7 +482,7 @@ class Settings extends React.Component<Props, State> {
     return getExtendedInputs(assets, cruxID, username);
   };
 
-  navigateToCruxRegistration = () => {
+  navigateToCruxManage = () => {
     const { navigation, cruxPay } = this.props;
     let isManagementAllowed = false;
     if (cruxPay.status && cruxPay.status.status === 'DONE') {
@@ -498,7 +497,6 @@ class Settings extends React.Component<Props, State> {
       });
       return;
     }
-    // navigation.navigate(CRUXPAY_REGISTRATION, { pageTitle: 'Manage CruxPay' });
     navigation.navigate(CRUXPAY_INJECTED_SCREEN, {
       pageTitle: 'Manage CruxPay',
       onClosePress: this.onClosePress,

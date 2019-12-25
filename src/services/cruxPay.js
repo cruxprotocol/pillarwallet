@@ -8,7 +8,7 @@ import { CruxPay } from '@cruxpay/rn-sdk';
 import { Alert } from 'react-native';
 
 // constants
-import { CRUXPAY_REGISTRATION, CRUXPAY_INJECTED_SCREEN, HOME } from 'constants/navigationConstants';
+import { HOME } from 'constants/navigationConstants';
 
 // components
 import Toast from 'components/Toast';
@@ -103,32 +103,30 @@ const confirmCloseCruxUI = (navigation) => {
   );
 };
 
-const processRegisterSuccess = async (loadCruxIDState, cruxPay, navigation, map) => {
+const processRegisterSuccess = async (loadCruxIDState: Function, cruxID: string, navigation, map: Object) => {
   // TODO: discuss what to do if a few failed?
   await loadCruxIDState();
   Toast.show({
     title: 'Registration Success',
-    message: `Your CRUX ID: ${cruxPay.cruxID} is being updated. It takes about few hours to complete registration.`,
+    message: `Your CRUX ID: ${cruxID} is being updated. It takes about few hours to complete registration.`,
     type: 'success',
     autoClose: true,
   });
   navigation.navigate(HOME);
 };
 
-
-const processPutAddressSuccess = async (loadCruxIDState, cruxPay, navigation, map) => {
+const processPutAddressSuccess = async (loadCruxIDState: Function, cruxID: string, navigation, map: Object) => {
   await loadCruxIDState();
   Toast.show({
     title: 'Update CruxPay Addresses',
-    message: `Your CRUX ID: ${cruxPay.cruxID} is has been updated!`,
+    message: `Your CRUX ID: ${cruxID} is has been updated!`,
     type: 'success',
     autoClose: true,
   });
   navigation.navigate(HOME);
 };
 
-
-const getExtendedInputs = (assets, cruxID, suggestedCruxIDSubdomain) => {
+const getExtendedInputs = (assets: Object, cruxID: string, suggestedCruxIDSubdomain: string) => {
   const availableCurrencies = {};
   Object.keys(assets)
     .forEach((key) => {

@@ -763,7 +763,7 @@
 
 "@cruxpay/rn-crux-ui@git+https://github.com/cruxprotocol/rn-crux-ui.git":
   version "0.0.1"
-  resolved "git+https://github.com/cruxprotocol/rn-crux-ui.git#18da7a5a412700236b3bcdd4e88fe319c3a3cafc"
+  resolved "git+https://github.com/cruxprotocol/rn-crux-ui.git#ffb9a2e19cb64ab2a11623d053fd0665cfe414a3"
 
 "@cruxpay/rn-sdk@https://github.com/cruxprotocol/rn-sdk#release/0.0.3":
   version "0.0.2"
