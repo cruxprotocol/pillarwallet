@@ -35,6 +35,7 @@ import {
 } from 'actions/appSettingsActions';
 import { lockScreenAction, logoutAction, resetIncorrectPasswordAction } from 'actions/authActions';
 import { cleanSmartWalletAccountsAction } from 'actions/smartWalletActions';
+import { loadCruxIDStateAction } from 'actions/cruxPayActions';
 
 // components
 import { Wrapper } from 'components/Layout';
@@ -54,6 +55,9 @@ import Button from 'components/Button';
 // services
 import Storage from 'services/storage';
 import ChatService from 'services/chat';
+import { getCruxWebViewInput, confirmCloseCruxUI, processPutAddressSuccess, getExtendedInputs } from 'services/cruxPay';
+
+import { accountAssetsSelector } from 'selectors/assets';
 
 // constants
 import {
@@ -61,7 +65,7 @@ import {
   CHANGE_PIN_FLOW,
   BACKUP_WALLET_IN_SETTINGS_FLOW,
   REVEAL_BACKUP_PHRASE,
-  CRUXPAY_REGISTRATION,
+  CRUXPAY_INJECTED_SCREEN,
 } from 'constants/navigationConstants';
 import { supportedFiatCurrencies, defaultFiatCurrency } from 'constants/assetsConstants';
 
@@ -75,9 +79,11 @@ import { getBiometryType } from 'utils/settings';
 // models
 import type { BackupStatus } from 'reducers/walletReducer';
 import type { Accounts } from 'models/Account';
+import type { Assets } from 'models/Asset';
 
 // partials
 import { SettingsSection } from './SettingsSection';
+import { createStructuredSelector } from 'reselect';
 
 type State = {
   visibleModal: ?string,
@@ -112,6 +118,8 @@ type Props = {
   logoutUser: () => void,
   accounts: Accounts,
   cruxPay: Object,
+  assets: Assets,
+  loadCruxIDState: Function,
 }
 
 const storage = Storage.getInstance('db');
@@ -303,7 +311,7 @@ const formCruxPayItems = (that, cruxID) => {
       key: 'manageCruxPay',
       title: 'Manage your CRUX ID',
       body: `Configure ${cruxID}`,
-      onPress: that.navigateToCruxRegistration,
+      onPress: that.navigateToCruxManage,
       label: 'new',
       minHeight: 96,
     },
@@ -458,7 +466,23 @@ class Settings extends React.Component<Props, State> {
     }
   };
 
-  navigateToCruxRegistration = () => {
+  onClosePress = () => {
+    const { navigation } = this.props;
+    confirmCloseCruxUI(navigation);
+  };
+
+  onPutAddressSuccess = async (map: Object) => {
+    // TODO: discuss what to do if a few failed?
+    const { navigation, cruxPay: { cruxID }, loadCruxIDState } = this.props;
+    await processPutAddressSuccess(loadCruxIDState, cruxID, navigation, map);
+  };
+
+  getInputExtension = () => {
+    const { user: { username }, assets, cruxPay: { cruxID } } = this.props;
+    return getExtendedInputs(assets, cruxID, username);
+  };
+
+  navigateToCruxManage = () => {
     const { navigation, cruxPay } = this.props;
     let isManagementAllowed = false;
     if (cruxPay.status && cruxPay.status.status === 'DONE') {
@@ -473,7 +497,14 @@ class Settings extends React.Component<Props, State> {
       });
       return;
     }
-    navigation.navigate(CRUXPAY_REGISTRATION, { pageTitle: 'Manage CruxPay' });
+    navigation.navigate(CRUXPAY_INJECTED_SCREEN, {
+      pageTitle: 'Manage CruxPay',
+      onClosePress: this.onClosePress,
+      onPutAddressSuccess: this.onPutAddressSuccess,
+      inputExtension: this.getInputExtension(),
+      cruxClient: cruxPay.cruxClient,
+      getCruxWebViewInput,
+    });
   };
 
   lockWallet = () => {
@@ -821,6 +852,10 @@ class Settings extends React.Component<Props, State> {
   }
 }
 
+const structuredSelector = createStructuredSelector({
+  assets: accountAssetsSelector,
+});
+
 const mapStateToProps = ({
   user: { data: user },
   appSettings: {
@@ -852,6 +887,11 @@ const mapStateToProps = ({
   cruxPay,
 });
 
+const combinedMapStateToProps = (state) => ({
+  ...structuredSelector(state),
+  ...mapStateToProps(state),
+});
+
 const mapDispatchToProps = (dispatch: Function) => ({
   saveBaseFiatCurrency: (currency) => dispatch(saveBaseFiatCurrencyAction(currency)),
   resetIncorrectPassword: () => dispatch(resetIncorrectPasswordAction()),
@@ -861,6 +901,7 @@ const mapDispatchToProps = (dispatch: Function) => ({
   setUserJoinedBeta: (status: boolean) => dispatch(setUserJoinedBetaAction(status)),
   lockScreen: () => dispatch(lockScreenAction()),
   logoutUser: () => dispatch(logoutAction()),
+  loadCruxIDState: () => dispatch(loadCruxIDStateAction()),
 });
 
-export default connect(mapStateToProps, mapDispatchToProps)(Settings);
+export default connect(combinedMapStateToProps, mapDispatchToProps)(Settings);

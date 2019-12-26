@@ -25,6 +25,7 @@ import BackgroundTimer from 'react-native-background-timer';
 import { connect } from 'react-redux';
 import { Animated, Easing, View, Image, AppState } from 'react-native';
 import { BaseText } from 'components/Typography';
+import CruxScreen from '@cruxpay/rn-crux-ui/src';
 
 // services
 import { updateNavigationLastScreenState } from 'services/navigation';
@@ -94,7 +95,6 @@ import ChatScreen from 'screens/Chat';
 import FiatExchangeScreen from 'screens/FiatExchange';
 import FiatCryptoScreen from 'screens/FiatExchange/FiatCrypto';
 import CruxPayIntroScreen from 'screens/CruxPay/CruxPayIntro';
-import CruxPayRegistrationScreen from 'screens/CruxPay/CruxPayRegistration';
 import SmartWalletIntroScreen from 'screens/UpgradeToSmartWallet/SmartWalletIntro';
 import UnsettledAssetsScreen from 'screens/UnsettledAssets';
 import SendSyntheticAssetScreen from 'screens/SendSynthetic/SendSyntheticAsset';
@@ -225,7 +225,7 @@ import {
   LOGOUT_PENDING,
   UNSETTLED_ASSETS_FLOW,
   CRUXPAY_INTRO,
-  CRUXPAY_REGISTRATION,
+  CRUXPAY_INJECTED_SCREEN,
 } from 'constants/navigationConstants';
 import { PENDING, REGISTERED } from 'constants/userConstants';
 
@@ -638,7 +638,7 @@ const AppFlowNavigation = createStackNavigator(
     [PILLAR_NETWORK_INTRO]: PillarNetworkIntro,
     [SMART_WALLET_INTRO]: SmartWalletIntroScreen,
     [CRUXPAY_INTRO]: CruxPayIntroScreen,
-    [CRUXPAY_REGISTRATION]: CruxPayRegistrationScreen,
+    [CRUXPAY_INJECTED_SCREEN]: CruxScreen,
     [LOGOUT_PENDING]: LogoutPendingScreen,
   },
   modalTransition,

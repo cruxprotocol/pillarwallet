@@ -5,6 +5,13 @@ import { baseColors } from 'utils/variables';
 // services
 import Storage from 'services/storage';
 import { CruxPay } from '@cruxpay/rn-sdk';
+import { Alert } from 'react-native';
+
+// constants
+import { HOME } from 'constants/navigationConstants';
+
+// components
+import Toast from 'components/Toast';
 
 const { CruxClientError } = CruxPay.errors;
 const { PENDING, DONE, REJECT } = CruxPay.blockstackService.SubdomainRegistrationStatus;
@@ -36,8 +43,8 @@ class InMemStorage extends CruxPay.storage.StorageService {
   }
 }
 
-const getCruxWebViewInput = async (cruxPay: Object, inputExtension: Object) => {
-  const { getAssetMap, getAddressMap, walletClientName } = cruxPay.cruxClient;
+const getCruxWebViewInput = async (cruxClient: Object, inputExtension: Object) => {
+  const { getAssetMap, getAddressMap, walletClientName } = cruxClient;
   const assetMap = await getAssetMap();
   const assetDetailList = map(assetMap, (value, key) => {
     return value;
@@ -52,7 +59,7 @@ const getCruxWebViewInput = async (cruxPay: Object, inputExtension: Object) => {
     publicAddressCurrencies: cruxPayPublicAddressCurrencies,
     assetList: assetDetailList,
     theme: '#3742fa',
-    subdomainRegistrar: cruxPay.cruxClient._nameService._subdomainRegistrar,
+    subdomainRegistrar: cruxClient._nameService._subdomainRegistrar,
     walletClientName,
     clientMapping,
   };
@@ -78,6 +85,62 @@ const getCruxStatusIcon = (status: string) => {
   return cruxStatusIcons[status];
 };
 
+const confirmCloseCruxUI = (navigation) => {
+  Alert.alert(
+    'Cancel CruxPay Setup',
+    'outside Are you sure you want to cancel the setup?',
+    [
+      {
+        text: 'Yes',
+        onPress: () => navigation.goBack(),
+      },
+      {
+        text: 'No',
+        style: 'cancel',
+      },
+    ],
+    { cancelable: true },
+  );
+};
+
+const processRegisterSuccess = async (loadCruxIDState: Function, cruxID: string, navigation, map: Object) => {
+  // TODO: discuss what to do if a few failed?
+  await loadCruxIDState();
+  Toast.show({
+    title: 'Registration Success',
+    message: `Your CRUX ID: ${cruxID} is being updated. It takes about few hours to complete registration.`,
+    type: 'success',
+    autoClose: true,
+  });
+  navigation.navigate(HOME);
+};
+
+const processPutAddressSuccess = async (loadCruxIDState: Function, cruxID: string, navigation, map: Object) => {
+  await loadCruxIDState();
+  Toast.show({
+    title: 'Update CruxPay Addresses',
+    message: `Your CRUX ID: ${cruxID} is has been updated!`,
+    type: 'success',
+    autoClose: true,
+  });
+  navigation.navigate(HOME);
+};
+
+const getExtendedInputs = (assets: Object, cruxID: string, suggestedCruxIDSubdomain: string) => {
+  const availableCurrencies = {};
+  Object.keys(assets)
+    .forEach((key) => {
+      // eslint-disable-next-line max-len
+      availableCurrencies[key.toLowerCase()] = assets[key].address ? { addressHash: assets[key].address } : { addressHash: assets[key].address };
+    });
+  const inputExtension = {
+    availableCurrencies,
+    theme: '#3742fa',
+    cruxIDSubdomain: cruxID ? getCruxPaySubdomain(cruxID) : '',
+    suggestedCruxIDSubdomain,
+  };
+  return inputExtension;
+};
 
 export {
   CruxStorageService,
@@ -87,4 +150,8 @@ export {
   getCruxPaySubdomain,
   getCruxStatusIcon,
   CruxClientError,
+  confirmCloseCruxUI,
+  processRegisterSuccess,
+  processPutAddressSuccess,
+  getExtendedInputs,
 };

@@ -48,7 +48,7 @@ import {
   ETH,
   PLR,
 } from 'constants/assetsConstants';
-import { EXCHANGE, SMART_WALLET_INTRO, CRUXPAY_INTRO, CRUXPAY_REGISTRATION } from 'constants/navigationConstants';
+import { EXCHANGE, SMART_WALLET_INTRO, CRUXPAY_INTRO } from 'constants/navigationConstants';
 import { SMART_WALLET_UPGRADE_STATUSES } from 'constants/smartWalletConstants';
 
 import { activeAccountSelector } from 'selectors';
