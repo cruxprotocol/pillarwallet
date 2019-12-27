@@ -761,9 +761,17 @@
     jsontokens "^2.0.2"
     regenerator-runtime "^0.13.3"
 
-"@cruxpay/rn-crux-ui@git+https://github.com/cruxprotocol/rn-crux-ui.git":
+"@cruxpay/rn-crux-ui@git+https://github.com/cruxprotocol/rn-crux-ui.git#265ab8acf28912603b367d03e4cc9d7d75360d21":
   version "0.0.1"
-  resolved "git+https://github.com/cruxprotocol/rn-crux-ui.git#ffb9a2e19cb64ab2a11623d053fd0665cfe414a3"
+  resolved "git+https://github.com/cruxprotocol/rn-crux-ui.git#265ab8acf28912603b367d03e4cc9d7d75360d21"
+  dependencies:
+    lodash.map "^4.6.0"
+
+"@cruxpay/rn-crux-ui@git+https://github.com/cruxprotocol/rn-crux-ui.git#ff87ddd8a93708ccfee189afe86d98e25f0c5ad0":
+  version "0.0.1"
+  resolved "git+https://github.com/cruxprotocol/rn-crux-ui.git#ff87ddd8a93708ccfee189afe86d98e25f0c5ad0"
+  dependencies:
+    lodash.map "^4.6.0"
 
 "@cruxpay/rn-sdk@https://github.com/cruxprotocol/rn-sdk#release/0.0.3":
   version "0.0.2"
@@ -8188,7 +8196,7 @@ lodash.isplainobject@^4.0.6:
   resolved "https://pillarproject.jfrog.io/pillarproject/api/npm/npm/lodash.isplainobject/-/lodash.isplainobject-4.0.6.tgz#7c526a52d89b45c45cc690b88163be0497f550cb"
   integrity sha1-fFJqUtibRcRcxpC4gWO+BJf1UMs=
 
-lodash.map@^4.4.0:
+lodash.map@^4.4.0, lodash.map@^4.6.0:
   version "4.6.0"
   resolved "https://registry.yarnpkg.com/lodash.map/-/lodash.map-4.6.0.tgz#771ec7839e3473d9c4cde28b19394c3562f4f6d3"
   integrity sha1-dx7Hg540c9nEzeKLGTlMNWL09tM=

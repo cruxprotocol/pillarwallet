@@ -25,7 +25,7 @@ import BackgroundTimer from 'react-native-background-timer';
 import { connect } from 'react-redux';
 import { Animated, Easing, View, Image, AppState } from 'react-native';
 import { BaseText } from 'components/Typography';
-import CruxScreen from '@cruxpay/rn-crux-ui/src';
+import { CruxScreen } from '@cruxpay/rn-crux-ui';
 
 // services
 import { updateNavigationLastScreenState } from 'services/navigation';

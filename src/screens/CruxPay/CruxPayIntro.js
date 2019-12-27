@@ -24,6 +24,7 @@ import { connect } from 'react-redux';
 import { Linking } from 'react-native';
 import { CachedImage } from 'react-native-cached-image';
 import { createStructuredSelector } from 'reselect';
+import { RNCruxUI } from '@cruxpay/rn-crux-ui';
 
 // components
 import ContainerWithHeader from 'components/Layout/ContainerWithHeader';
@@ -45,10 +46,10 @@ import type { Assets } from 'models/Asset';
 
 // service
 import {
-  getCruxWebViewInput,
   getExtendedInputs,
   confirmCloseCruxUI,
   processRegisterSuccess,
+  handleCruxError,
 } from 'services/cruxPay';
 
 
@@ -117,16 +118,30 @@ class CruxPayIntro extends React.PureComponent<Props, State> {
   };
 
   getInputExtension = () => {
-    const { user: { username }, assets, cruxPay: { cruxID } } = this.props;
-    return getExtendedInputs(assets, cruxID, username);
+    const { user: { username }, assets } = this.props;
+    return getExtendedInputs(assets, username);
   };
 
-  render() {
+  openCruxRegister = () => {
     const {
       navigation,
       cruxPay,
     } = this.props;
+    const options = {
+      navigation,
+      onError: handleCruxError,
+      onPutAddressSuccess: null,
+      cruxClient: cruxPay.cruxClient,
+      onClosePress: this.onClosePress,
+      cruxRouteName: CRUXPAY_INJECTED_SCREEN,
+      inputExtension: this.getInputExtension(),
+      onRegisterSuccess: this.onRegisterSuccess,
+    };
+    const cruxui = new RNCruxUI.CruxUI(options);
+    return cruxui.manage();
+  };
 
+  render() {
     return (
       <ContainerWithHeader
         headerProps={{
@@ -163,14 +178,7 @@ class CruxPayIntro extends React.PureComponent<Props, State> {
             <Button
               block
               title="Setup CruxPay"
-              onPress={() => navigation.navigate(CRUXPAY_INJECTED_SCREEN, {
-                pageTitle: 'Register CruxPay',
-                onClosePress: this.onClosePress,
-                onRegisterSuccess: this.onRegisterSuccess,
-                inputExtension: this.getInputExtension(),
-                cruxClient: cruxPay.cruxClient,
-                getCruxWebViewInput,
-              })}
+              onPress={this.openCruxRegister}
               style={{
                 backgroundColor: baseColors.persianBlue,
                 marginTop: 40,

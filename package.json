@@ -110,7 +110,7 @@
     "includeFailureMsg": true
   },
   "dependencies": {
-    "@cruxpay/rn-crux-ui": "git+https://github.com/cruxprotocol/rn-crux-ui.git",
+    "@cruxpay/rn-crux-ui": "git+https://github.com/cruxprotocol/rn-crux-ui.git#ff87ddd8a93708ccfee189afe86d98e25f0c5ad0",
     "@cruxpay/rn-sdk": "https://github.com/cruxprotocol/rn-sdk#release/0.0.3",
     "@matt-block/react-native-in-app-browser": "^2.1.3",
     "@netgum/utils": "^0.1.3",

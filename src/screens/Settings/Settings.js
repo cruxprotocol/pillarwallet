@@ -25,6 +25,7 @@ import * as Keychain from 'react-native-keychain';
 import Intercom from 'react-native-intercom';
 import type { NavigationScreenProp } from 'react-navigation';
 import get from 'lodash.get';
+import { RNCruxUI } from '@cruxpay/rn-crux-ui';
 
 // actions
 import {
@@ -55,7 +56,7 @@ import Button from 'components/Button';
 // services
 import Storage from 'services/storage';
 import ChatService from 'services/chat';
-import { getCruxWebViewInput, confirmCloseCruxUI, processPutAddressSuccess, getExtendedInputs } from 'services/cruxPay';
+import { confirmCloseCruxUI, processPutAddressSuccess, getExtendedInputs, handleCruxError } from 'services/cruxPay';
 
 import { accountAssetsSelector } from 'selectors/assets';
 
@@ -497,14 +498,19 @@ class Settings extends React.Component<Props, State> {
       });
       return;
     }
-    navigation.navigate(CRUXPAY_INJECTED_SCREEN, {
-      pageTitle: 'Manage CruxPay',
-      onClosePress: this.onClosePress,
-      onPutAddressSuccess: this.onPutAddressSuccess,
-      inputExtension: this.getInputExtension(),
+    const options = {
+      navigation,
+      onRegisterSuccess: null,
+      onError: handleCruxError,
       cruxClient: cruxPay.cruxClient,
-      getCruxWebViewInput,
-    });
+      onClosePress: this.onClosePress,
+      cruxRouteName: CRUXPAY_INJECTED_SCREEN,
+      inputExtension: this.getInputExtension(),
+      onPutAddressSuccess: this.onPutAddressSuccess,
+    };
+    const cruxui = new RNCruxUI.CruxUI(options);
+    // eslint-disable-next-line consistent-return
+    return cruxui.manage();
   };
 
   lockWallet = () => {

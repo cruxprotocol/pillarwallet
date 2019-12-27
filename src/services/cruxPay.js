@@ -1,10 +1,10 @@
 // @flow
-import map from 'lodash.map';
 import { baseColors } from 'utils/variables';
 
 // services
 import Storage from 'services/storage';
 import { CruxPay } from '@cruxpay/rn-sdk';
+import { CruxUIUtil } from '@cruxpay/rn-crux-ui';
 import { Alert } from 'react-native';
 
 // constants
@@ -14,6 +14,7 @@ import { HOME } from 'constants/navigationConstants';
 import Toast from 'components/Toast';
 
 const { CruxClientError } = CruxPay.errors;
+const { isValidCruxID, getCruxPaySubdomain } = CruxUIUtil;
 const { PENDING, DONE, REJECT } = CruxPay.blockstackService.SubdomainRegistrationStatus;
 
 const storage = Storage.getInstance('db');
@@ -42,39 +43,6 @@ class InMemStorage extends CruxPay.storage.StorageService {
     return this.dataMemory[key];
   }
 }
-
-const getCruxWebViewInput = async (cruxClient: Object, inputExtension: Object) => {
-  const { getAssetMap, getAddressMap, walletClientName } = cruxClient;
-  const assetMap = await getAssetMap();
-  const assetDetailList = map(assetMap, (value, key) => {
-    return value;
-  });
-  const cruxPayPublicAddressCurrencies = Object.keys(await getAddressMap());
-  const clientMapping = {};
-  map(assetMap, (value, key) => {
-    clientMapping[key] = value.assetId;
-  });
-  let currentInputData = {
-    experience: 'react-native',
-    publicAddressCurrencies: cruxPayPublicAddressCurrencies,
-    assetList: assetDetailList,
-    theme: '#3742fa',
-    subdomainRegistrar: cruxClient._nameService._subdomainRegistrar,
-    walletClientName,
-    clientMapping,
-  };
-  currentInputData = Object.assign(currentInputData, inputExtension);
-  return currentInputData;
-};
-
-const getCruxPaySubdomain = (input: string) => {
-  return input.split('@')[0];
-};
-
-// TODO: ask js-sdk to export this
-const isValidCruxID = (input: string) => {
-  return input.includes('crux') && input.includes('@') && getCruxPaySubdomain(input).length > 3;
-};
 
 const getCruxStatusIcon = (status: string) => {
   const cruxStatusIcons = {
@@ -126,26 +94,28 @@ const processPutAddressSuccess = async (loadCruxIDState: Function, cruxID: strin
   navigation.navigate(HOME);
 };
 
-const getExtendedInputs = (assets: Object, cruxID: string, suggestedCruxIDSubdomain: string) => {
+const getExtendedInputs = (assets: Object, suggestedCruxIDSubdomain: string) => {
   const availableCurrencies = {};
+  const theme = '#3742fa';
   Object.keys(assets)
     .forEach((key) => {
       // eslint-disable-next-line max-len
       availableCurrencies[key.toLowerCase()] = assets[key].address ? { addressHash: assets[key].address } : { addressHash: assets[key].address };
     });
-  const inputExtension = {
+  return {
+    theme,
     availableCurrencies,
-    theme: '#3742fa',
-    cruxIDSubdomain: cruxID ? getCruxPaySubdomain(cruxID) : '',
     suggestedCruxIDSubdomain,
   };
-  return inputExtension;
+};
+
+const handleCruxError = (error: CruxClientError) => {
+  console.error('CruxPay handleError: ', error);
 };
 
 export {
   CruxStorageService,
   InMemStorage,
-  getCruxWebViewInput,
   isValidCruxID,
   getCruxPaySubdomain,
   getCruxStatusIcon,
@@ -154,4 +124,5 @@ export {
   processRegisterSuccess,
   processPutAddressSuccess,
   getExtendedInputs,
+  handleCruxError,
 };
