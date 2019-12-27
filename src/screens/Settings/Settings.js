@@ -479,8 +479,8 @@ class Settings extends React.Component<Props, State> {
   };
 
   getInputExtension = () => {
-    const { user: { username }, assets, cruxPay: { cruxID } } = this.props;
-    return getExtendedInputs(assets, cruxID, username);
+    const { user: { username }, assets } = this.props;
+    return getExtendedInputs(assets, username);
   };
 
   navigateToCruxManage = () => {
